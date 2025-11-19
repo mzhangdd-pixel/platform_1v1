@@ -10,8 +10,38 @@
 // 全局手柄管理器
 let gamepadHandlers = [];
 
+// 页面加载时立即初始化手柄监听 (用于显示连接提示)
+(function() {
+    // 创建一个临时 handler 用于显示连接提示
+    const tempHandler = new GamepadHandler(0);
+
+    // 不启动轮询,只用于连接提示
+    console.log('[Gamepad Integration] 手柄监听已启动 (等待连接)');
+})();
+
 // 扩展 Player 类的原型，添加手柄控制方法
 (function() {
+    // 等待 Player 类定义
+    if (typeof Player === 'undefined') {
+        console.warn('[Gamepad Integration] Player 类尚未定义,等待加载...');
+
+        // 使用 MutationObserver 或轮询等待
+        const checkInterval = setInterval(() => {
+            if (typeof Player !== 'undefined') {
+                clearInterval(checkInterval);
+                console.log('[Gamepad Integration] Player 类已加载,开始注入手柄方法');
+                injectGamepadMethods();
+            }
+        }, 100);
+        return;
+    }
+
+    // 立即注入
+    injectGamepadMethods();
+})();
+
+// 注入手柄控制方法
+function injectGamepadMethods() {
     // 保存原始 update 方法
     const originalUpdate = Player.prototype.update;
 
@@ -84,7 +114,7 @@ let gamepadHandlers = [];
         // 重置手柄速度供下一帧使用
         this.gamepadVx = 0;
     };
-})();
+}
 
 // 修改 startGame 函数以初始化手柄
 (function() {

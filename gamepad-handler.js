@@ -49,6 +49,29 @@ class GamepadHandler {
 
         window.addEventListener('gamepadconnected', this.onConnect);
         window.addEventListener('gamepaddisconnected', this.onDisconnect);
+
+        // 检查是否有已连接的手柄 (页面加载时手柄已连接的情况)
+        this.checkExistingGamepads();
+    }
+
+    /**
+     * 检查已连接的手柄 (处理页面加载时手柄已连接的情况)
+     */
+    checkExistingGamepads() {
+        const gamepads = navigator.getGamepads();
+        if (!gamepads) return;
+
+        for (let i = 0; i < gamepads.length; i++) {
+            const gamepad = gamepads[i];
+            if (gamepad && this.gamepadIndex === null) {
+                // 找到一个已连接的手柄
+                this.gamepadIndex = gamepad.index;
+                this.isConnected = true;
+                console.log(`[GamepadHandler] Player ${this.playerIndex + 1} 检测到已连接的手柄:`, gamepad.id);
+                this.showConnectionStatus(true);
+                break;
+            }
+        }
     }
 
     /**
