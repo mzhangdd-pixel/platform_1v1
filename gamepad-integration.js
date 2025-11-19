@@ -115,11 +115,18 @@ function injectGamepadMethods() {
         // 调用原始 update
         originalUpdate.call(this);
 
-        // 手柄输入与键盘输入融合 (支持同时使用)
-        // 如果手柄有输入，优先使用手柄，否则使用键盘
+        // CRITICAL FIX: 在 applyPhysics 之后再次应用手柄输入
+        // 因为原始 update 中的移动逻辑会覆盖 vx
+        // 但我们需要在物理应用后立即更新位置
         if (Math.abs(this.gamepadVx) > 0.01 && !this.isLocked()) {
-            this.vx = this.gamepadVx;
+            // 直接修改位置而不是速度
+            this.x += this.gamepadVx;
+
+            // 边界检测
+            if (this.x < 0) this.x = 0;
+            if (this.x + this.w > 1000) this.x = 1000 - this.w;
         }
+
         // 重置手柄速度供下一帧使用
         this.gamepadVx = 0;
     };
