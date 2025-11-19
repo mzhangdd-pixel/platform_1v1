@@ -125,13 +125,98 @@ function injectGamepadMethods() {
     };
 }
 
-// 修改 startGame 函数以初始化手柄
+// 手柄初始化函数
+function initGamepadSystem(playersList) {
+    console.log('[Gamepad Integration] 开始初始化游戏手柄系统...');
+
+    // 清理临时 handler (页面加载时创建的,仅用于显示连接提示)
+    console.log('[Gamepad Integration] 销毁临时 handlers:', tempHandlers.length);
+    tempHandlers.forEach(handler => handler.destroy());
+    tempHandlers = [];
+
+    // 清理旧的游戏 handler
+    gamepadHandlers.forEach(handler => handler.destroy());
+    gamepadHandlers = [];
+
+    // 重置分配列表
+    window.allocatedGamepadIndices.clear();
+
+    // 为 Player 1 初始化手柄
+    console.log('[Gamepad Integration] 为 P1 创建 handler...');
+    const p1Handler = new GamepadHandler(0);
+    p1Handler.startPolling(playersList[0]);
+    gamepadHandlers.push(p1Handler);
+
+    // 为 Player 2 初始化手柄
+    console.log('[Gamepad Integration] 为 P2 创建 handler...');
+    const p2Handler = new GamepadHandler(1);
+    p2Handler.startPolling(playersList[1]);
+    gamepadHandlers.push(p2Handler);
+
+    console.log('[Gamepad Integration] 手柄系统初始化完成! handlers:', gamepadHandlers.length);
+}
+
+// 劫持 startGame 函数 - 使用 DOM 事件重新绑定
+(function() {
+    // 等待 DOM 加载完成
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', hijackStartButton);
+    } else {
+        hijackStartButton();
+    }
+
+    function hijackStartButton() {
+        console.log('[Gamepad Integration] 劫持开始按钮...');
+
+        // 延迟执行,确保 startGame 已定义
+        setTimeout(() => {
+            const startBtn = document.getElementById('start-btn');
+            if (!startBtn) {
+                console.error('[Gamepad Integration] 未找到开始按钮!');
+                return;
+            }
+
+            // 保存原始 startGame
+            const originalStartGame = window.startGame || startGame;
+
+            // 创建新的包装函数
+            const wrappedStartGame = function() {
+                console.log('[Gamepad Integration] 包装的 startGame 被调用');
+
+                // 调用原始函数
+                originalStartGame.call(this);
+
+                // 等待 players 数组创建完成后初始化手柄
+                setTimeout(() => {
+                    if (typeof players !== 'undefined' && players.length >= 2) {
+                        initGamepadSystem(players);
+                    } else {
+                        console.error('[Gamepad Integration] players 未定义!');
+                    }
+                }, 100);
+            };
+
+            // 移除旧的监听器并添加新的
+            const newBtn = startBtn.cloneNode(true);
+            startBtn.parentNode.replaceChild(newBtn, startBtn);
+            newBtn.addEventListener('click', wrappedStartGame);
+
+            console.log('[Gamepad Integration] 开始按钮劫持成功');
+        }, 500);
+    }
+})();
+
+// 旧的覆盖方法 (保留作为备份)
 (function() {
     const originalStartGame = window.startGame;
 
     window.startGame = function() {
+        console.log('[Gamepad Integration] window.startGame 被调用 (备份方法)');
+
         // 调用原始 startGame
-        originalStartGame.call(this);
+        if (originalStartGame) {
+            originalStartGame.call(this);
+        }
 
         console.log('[Gamepad Integration] 开始初始化游戏手柄系统...');
 
