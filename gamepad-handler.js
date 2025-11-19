@@ -71,7 +71,6 @@ class GamepadHandler {
                 this.gamepadIndex = gamepad.index;
                 this.isConnected = true;
                 allocatedIndices.add(gamepad.index);
-                console.log(`[GamepadHandler] Player ${this.playerIndex + 1} 检测到已连接的手柄:`, gamepad.id);
                 this.showConnectionStatus(true);
                 break;
             }
@@ -90,7 +89,6 @@ class GamepadHandler {
             this.gamepadIndex = event.gamepad.index;
             this.isConnected = true;
             allocatedIndices.add(event.gamepad.index);
-            console.log(`[GamepadHandler] Player ${this.playerIndex + 1} 手柄已连接:`, event.gamepad.id);
             this.showConnectionStatus(true);
         }
     }
@@ -106,7 +104,6 @@ class GamepadHandler {
 
             this.gamepadIndex = null;
             this.isConnected = false;
-            console.log(`[GamepadHandler] Player ${this.playerIndex + 1} 手柄已断开`);
             this.showConnectionStatus(false);
         }
     }
@@ -159,12 +156,10 @@ class GamepadHandler {
      */
     startPolling(character) {
         if (this.pollingId !== null) {
-            console.warn(`[GamepadHandler] Player ${this.playerIndex + 1} 轮询已在运行`);
             return;
         }
 
-        this.character = character; // 保存角色引用
-        console.log(`[GamepadHandler] Player ${this.playerIndex + 1} 绑定角色:`, character);
+        this.character = character;
 
         const poll = () => {
             this.processInput();
@@ -172,7 +167,6 @@ class GamepadHandler {
         };
 
         this.pollingId = requestAnimationFrame(poll);
-        console.log(`[GamepadHandler] Player ${this.playerIndex + 1} 开始轮询, 手柄索引: ${this.gamepadIndex}`);
     }
 
     /**
@@ -182,7 +176,6 @@ class GamepadHandler {
         if (this.pollingId !== null) {
             cancelAnimationFrame(this.pollingId);
             this.pollingId = null;
-            console.log(`[GamepadHandler] Player ${this.playerIndex + 1} 停止轮询`);
         }
     }
 
@@ -200,7 +193,6 @@ class GamepadHandler {
         const gamepad = gamepads[this.gamepadIndex];
 
         if (!gamepad) {
-            console.warn(`[GamepadHandler] Player ${this.playerIndex + 1} 手柄 ${this.gamepadIndex} 未找到`);
             return;
         }
 
@@ -211,16 +203,9 @@ class GamepadHandler {
         // 应用径向死区算法
         const filtered = this.applyRadialDeadzone(rawX, rawY);
 
-        // 调试: 检测到输入时打印
-        if (Math.abs(filtered.x) > 0.01) {
-            console.log(`[GamepadHandler] P${this.playerIndex + 1} 摇杆输入: ${filtered.x.toFixed(2)}, character:`, this.character);
-        }
-
         // 传递归一化的 X 轴值给角色移动函数
         if (this.character && this.character.moveGamepad) {
             this.character.moveGamepad(filtered.x);
-        } else if (Math.abs(filtered.x) > 0.01) {
-            console.warn(`[GamepadHandler] P${this.playerIndex + 1} moveGamepad 方法不存在! character:`, this.character);
         }
 
         // ========== 按钮输入处理 (边沿触发) ==========

@@ -23,29 +23,21 @@ let tempHandlers = [];
     const tempP2Handler = new GamepadHandler(1);
 
     tempHandlers.push(tempP1Handler, tempP2Handler);
-
-    // 不启动轮询,只用于连接提示
-    console.log('[Gamepad Integration] 手柄监听已启动 (支持双手柄)');
 })();
 
 // 扩展 Player 类的原型，添加手柄控制方法
 (function() {
     // 等待 Player 类定义
     if (typeof Player === 'undefined') {
-        console.warn('[Gamepad Integration] Player 类尚未定义,等待加载...');
-
-        // 使用 MutationObserver 或轮询等待
         const checkInterval = setInterval(() => {
             if (typeof Player !== 'undefined') {
                 clearInterval(checkInterval);
-                console.log('[Gamepad Integration] Player 类已加载,开始注入手柄方法');
                 injectGamepadMethods();
             }
         }, 100);
         return;
     }
 
-    // 立即注入
     injectGamepadMethods();
 })();
 
@@ -134,10 +126,7 @@ function injectGamepadMethods() {
 
 // 手柄初始化函数
 function initGamepadSystem(playersList) {
-    console.log('[Gamepad Integration] 开始初始化游戏手柄系统...');
-
-    // 清理临时 handler (页面加载时创建的,仅用于显示连接提示)
-    console.log('[Gamepad Integration] 销毁临时 handlers:', tempHandlers.length);
+    // 清理临时 handler
     tempHandlers.forEach(handler => handler.destroy());
     tempHandlers = [];
 
@@ -149,18 +138,14 @@ function initGamepadSystem(playersList) {
     window.allocatedGamepadIndices.clear();
 
     // 为 Player 1 初始化手柄
-    console.log('[Gamepad Integration] 为 P1 创建 handler...');
     const p1Handler = new GamepadHandler(0);
     p1Handler.startPolling(playersList[0]);
     gamepadHandlers.push(p1Handler);
 
     // 为 Player 2 初始化手柄
-    console.log('[Gamepad Integration] 为 P2 创建 handler...');
     const p2Handler = new GamepadHandler(1);
     p2Handler.startPolling(playersList[1]);
     gamepadHandlers.push(p2Handler);
-
-    console.log('[Gamepad Integration] 手柄系统初始化完成! handlers:', gamepadHandlers.length);
 }
 
 // 劫持 startGame 函数 - 使用 DOM 事件重新绑定
@@ -173,32 +158,19 @@ function initGamepadSystem(playersList) {
     }
 
     function hijackStartButton() {
-        console.log('[Gamepad Integration] 劫持开始按钮...');
-
-        // 延迟执行,确保 startGame 已定义
         setTimeout(() => {
             const startBtn = document.getElementById('start-btn');
-            if (!startBtn) {
-                console.error('[Gamepad Integration] 未找到开始按钮!');
-                return;
-            }
+            if (!startBtn) return;
 
-            // 保存原始 startGame
             const originalStartGame = window.startGame || startGame;
 
-            // 创建新的包装函数
             const wrappedStartGame = function() {
-                console.log('[Gamepad Integration] 包装的 startGame 被调用');
-
-                // 调用原始函数
                 originalStartGame.call(this);
 
                 // 等待 players 数组创建完成后初始化手柄
                 setTimeout(() => {
                     if (typeof players !== 'undefined' && players.length >= 2) {
                         initGamepadSystem(players);
-                    } else {
-                        console.error('[Gamepad Integration] players 未定义!');
                     }
                 }, 100);
             };
@@ -207,53 +179,10 @@ function initGamepadSystem(playersList) {
             const newBtn = startBtn.cloneNode(true);
             startBtn.parentNode.replaceChild(newBtn, startBtn);
             newBtn.addEventListener('click', wrappedStartGame);
-
-            console.log('[Gamepad Integration] 开始按钮劫持成功');
         }, 500);
     }
 })();
 
-// 旧的覆盖方法 (保留作为备份)
-(function() {
-    const originalStartGame = window.startGame;
-
-    window.startGame = function() {
-        console.log('[Gamepad Integration] window.startGame 被调用 (备份方法)');
-
-        // 调用原始 startGame
-        if (originalStartGame) {
-            originalStartGame.call(this);
-        }
-
-        console.log('[Gamepad Integration] 开始初始化游戏手柄系统...');
-
-        // 清理临时 handler (页面加载时创建的,仅用于显示连接提示)
-        console.log('[Gamepad Integration] 销毁临时 handlers:', tempHandlers.length);
-        tempHandlers.forEach(handler => handler.destroy());
-        tempHandlers = [];
-
-        // 清理旧的游戏 handler
-        gamepadHandlers.forEach(handler => handler.destroy());
-        gamepadHandlers = [];
-
-        // 重置分配列表
-        window.allocatedGamepadIndices.clear();
-
-        // 为 Player 1 初始化手柄
-        console.log('[Gamepad Integration] 为 P1 创建 handler...');
-        const p1Handler = new GamepadHandler(0);
-        p1Handler.startPolling(players[0]);
-        gamepadHandlers.push(p1Handler);
-
-        // 为 Player 2 初始化手柄
-        console.log('[Gamepad Integration] 为 P2 创建 handler...');
-        const p2Handler = new GamepadHandler(1);
-        p2Handler.startPolling(players[1]);
-        gamepadHandlers.push(p2Handler);
-
-        console.log('[Gamepad Integration] 手柄系统初始化完成! handlers:', gamepadHandlers.length);
-    };
-})();
 
 // 游戏结束时清理手柄
 (function() {
@@ -268,5 +197,3 @@ function initGamepadSystem(playersList) {
         originalEndGame.call(this, winnerId);
     };
 })();
-
-console.log('[Gamepad Integration] 补丁已加载');
