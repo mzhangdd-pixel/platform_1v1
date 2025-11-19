@@ -13,11 +13,16 @@ let gamepadHandlers = [];
 // 全局已分配的手柄索引 (防止重复绑定)
 window.allocatedGamepadIndices = new Set();
 
+// 临时 handler (仅用于显示连接提示,游戏开始时会被销毁)
+let tempHandlers = [];
+
 // 页面加载时立即初始化手柄监听 (用于显示连接提示)
 (function() {
     // 为 P1 和 P2 创建临时 handler 用于显示连接提示
     const tempP1Handler = new GamepadHandler(0);
     const tempP2Handler = new GamepadHandler(1);
+
+    tempHandlers.push(tempP1Handler, tempP2Handler);
 
     // 不启动轮询,只用于连接提示
     console.log('[Gamepad Integration] 手柄监听已启动 (支持双手柄)');
@@ -128,21 +133,33 @@ function injectGamepadMethods() {
         // 调用原始 startGame
         originalStartGame.call(this);
 
-        // 清理旧的手柄实例
+        console.log('[Gamepad Integration] 开始初始化游戏手柄系统...');
+
+        // 清理临时 handler (页面加载时创建的,仅用于显示连接提示)
+        console.log('[Gamepad Integration] 销毁临时 handlers:', tempHandlers.length);
+        tempHandlers.forEach(handler => handler.destroy());
+        tempHandlers = [];
+
+        // 清理旧的游戏 handler
         gamepadHandlers.forEach(handler => handler.destroy());
         gamepadHandlers = [];
 
+        // 重置分配列表
+        window.allocatedGamepadIndices.clear();
+
         // 为 Player 1 初始化手柄
+        console.log('[Gamepad Integration] 为 P1 创建 handler...');
         const p1Handler = new GamepadHandler(0);
         p1Handler.startPolling(players[0]);
         gamepadHandlers.push(p1Handler);
 
         // 为 Player 2 初始化手柄
+        console.log('[Gamepad Integration] 为 P2 创建 handler...');
         const p2Handler = new GamepadHandler(1);
         p2Handler.startPolling(players[1]);
         gamepadHandlers.push(p2Handler);
 
-        console.log('[Gamepad Integration] 手柄系统已初始化 (支持双手柄)');
+        console.log('[Gamepad Integration] 手柄系统初始化完成! handlers:', gamepadHandlers.length);
     };
 })();
 
