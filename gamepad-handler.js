@@ -159,11 +159,12 @@ class GamepadHandler {
      */
     startPolling(character) {
         if (this.pollingId !== null) {
-            console.warn('[GamepadHandler] 轮询已在运行');
+            console.warn(`[GamepadHandler] Player ${this.playerIndex + 1} 轮询已在运行`);
             return;
         }
 
         this.character = character; // 保存角色引用
+        console.log(`[GamepadHandler] Player ${this.playerIndex + 1} 绑定角色:`, character);
 
         const poll = () => {
             this.processInput();
@@ -171,7 +172,7 @@ class GamepadHandler {
         };
 
         this.pollingId = requestAnimationFrame(poll);
-        console.log(`[GamepadHandler] Player ${this.playerIndex + 1} 开始轮询`);
+        console.log(`[GamepadHandler] Player ${this.playerIndex + 1} 开始轮询, 手柄索引: ${this.gamepadIndex}`);
     }
 
     /**
@@ -199,6 +200,7 @@ class GamepadHandler {
         const gamepad = gamepads[this.gamepadIndex];
 
         if (!gamepad) {
+            console.warn(`[GamepadHandler] Player ${this.playerIndex + 1} 手柄 ${this.gamepadIndex} 未找到`);
             return;
         }
 
@@ -209,9 +211,16 @@ class GamepadHandler {
         // 应用径向死区算法
         const filtered = this.applyRadialDeadzone(rawX, rawY);
 
+        // 调试: 检测到输入时打印
+        if (Math.abs(filtered.x) > 0.01) {
+            console.log(`[GamepadHandler] P${this.playerIndex + 1} 摇杆输入: ${filtered.x.toFixed(2)}, character:`, this.character);
+        }
+
         // 传递归一化的 X 轴值给角色移动函数
-        if (this.character.moveGamepad) {
+        if (this.character && this.character.moveGamepad) {
             this.character.moveGamepad(filtered.x);
+        } else if (Math.abs(filtered.x) > 0.01) {
+            console.warn(`[GamepadHandler] P${this.playerIndex + 1} moveGamepad 方法不存在! character:`, this.character);
         }
 
         // ========== 按钮输入处理 (边沿触发) ==========
