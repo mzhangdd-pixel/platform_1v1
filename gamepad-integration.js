@@ -10,13 +10,17 @@
 // 全局手柄管理器
 let gamepadHandlers = [];
 
+// 全局已分配的手柄索引 (防止重复绑定)
+window.allocatedGamepadIndices = new Set();
+
 // 页面加载时立即初始化手柄监听 (用于显示连接提示)
 (function() {
-    // 创建一个临时 handler 用于显示连接提示
-    const tempHandler = new GamepadHandler(0);
+    // 为 P1 和 P2 创建临时 handler 用于显示连接提示
+    const tempP1Handler = new GamepadHandler(0);
+    const tempP2Handler = new GamepadHandler(1);
 
     // 不启动轮询,只用于连接提示
-    console.log('[Gamepad Integration] 手柄监听已启动 (等待连接)');
+    console.log('[Gamepad Integration] 手柄监听已启动 (支持双手柄)');
 })();
 
 // 扩展 Player 类的原型，添加手柄控制方法
@@ -133,7 +137,12 @@ function injectGamepadMethods() {
         p1Handler.startPolling(players[0]);
         gamepadHandlers.push(p1Handler);
 
-        console.log('[Gamepad Integration] 手柄系统已初始化');
+        // 为 Player 2 初始化手柄
+        const p2Handler = new GamepadHandler(1);
+        p2Handler.startPolling(players[1]);
+        gamepadHandlers.push(p2Handler);
+
+        console.log('[Gamepad Integration] 手柄系统已初始化 (支持双手柄)');
     };
 })();
 

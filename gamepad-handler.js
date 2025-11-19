@@ -61,12 +61,16 @@ class GamepadHandler {
         const gamepads = navigator.getGamepads();
         if (!gamepads) return;
 
+        // 检查全局分配列表 (如果存在)
+        const allocatedIndices = window.allocatedGamepadIndices || new Set();
+
         for (let i = 0; i < gamepads.length; i++) {
             const gamepad = gamepads[i];
-            if (gamepad && this.gamepadIndex === null) {
-                // 找到一个已连接的手柄
+            // 找到未被分配的手柄
+            if (gamepad && this.gamepadIndex === null && !allocatedIndices.has(gamepad.index)) {
                 this.gamepadIndex = gamepad.index;
                 this.isConnected = true;
+                allocatedIndices.add(gamepad.index);
                 console.log(`[GamepadHandler] Player ${this.playerIndex + 1} 检测到已连接的手柄:`, gamepad.id);
                 this.showConnectionStatus(true);
                 break;
@@ -78,10 +82,14 @@ class GamepadHandler {
      * 手柄连接事件处理 (3.2节 - Lifecycle Events)
      */
     onConnect(event) {
-        // 只绑定第一个连接的手柄到对应玩家
-        if (this.gamepadIndex === null) {
+        // 检查全局分配列表
+        const allocatedIndices = window.allocatedGamepadIndices || new Set();
+
+        // 只绑定未分配的手柄
+        if (this.gamepadIndex === null && !allocatedIndices.has(event.gamepad.index)) {
             this.gamepadIndex = event.gamepad.index;
             this.isConnected = true;
+            allocatedIndices.add(event.gamepad.index);
             console.log(`[GamepadHandler] Player ${this.playerIndex + 1} 手柄已连接:`, event.gamepad.id);
             this.showConnectionStatus(true);
         }
@@ -92,6 +100,10 @@ class GamepadHandler {
      */
     onDisconnect(event) {
         if (event.gamepad.index === this.gamepadIndex) {
+            // 从全局分配列表中移除
+            const allocatedIndices = window.allocatedGamepadIndices || new Set();
+            allocatedIndices.delete(this.gamepadIndex);
+
             this.gamepadIndex = null;
             this.isConnected = false;
             console.log(`[GamepadHandler] Player ${this.playerIndex + 1} 手柄已断开`);
