@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>双人平台乱斗 (Dual Platformer Brawl)</title>
+    <title>双人平台乱斗 (Dual Gamepad V6)</title>
     <style>
         :root {
             --apple-blue: #0071e3;
@@ -12,6 +12,16 @@
             --apple-bg: #fbfbfd;
             --apple-card-bg: #ffffff;
             --apple-border: #d2d2d7;
+            --apple-modal-bg: rgba(255, 255, 255, 0.8);
+        }
+
+        body.dark-mode {
+            --apple-text: #f5f5f7;
+            --apple-gray: #a1a1a6;
+            --apple-bg: #000000;
+            --apple-card-bg: #1c1c1e;
+            --apple-border: #38383a;
+            --apple-modal-bg: rgba(30, 30, 30, 0.8);
         }
 
         body {
@@ -26,18 +36,19 @@
             justify-content: center;
             height: 100vh;
             overflow: hidden;
+            transition: background-color 0.5s, color 0.5s;
         }
 
         #gameContainer {
             position: relative;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
             border-radius: 18px;
             overflow: hidden;
-            background: #fff;
+            background: var(--apple-card-bg);
+            transition: background-color 0.5s;
         }
 
         canvas {
-            background-color: #ffffff;
             display: block;
         }
 
@@ -63,7 +74,7 @@
         .bar-container {
             width: 100%;
             height: 8px;
-            background: #e5e5ea;
+            background: rgba(128,128,128,0.2);
             margin-top: 8px;
             position: relative;
             border-radius: 4px;
@@ -72,7 +83,7 @@
 
         .bar-fill {
             height: 100%;
-            transition: width 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+            transition: width 0.1s linear;
             border-radius: 4px;
         }
 
@@ -88,8 +99,8 @@
         .cd-box {
             width: 32px;
             height: 32px;
-            background: #f2f2f7;
-            border: 1px solid #e5e5ea;
+            background: rgba(128,128,128,0.1);
+            border: 1px solid var(--apple-border);
             border-radius: 8px;
             display: flex;
             align-items: center;
@@ -106,7 +117,7 @@
             bottom: 0;
             left: 0;
             width: 100%;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.5);
             transition: height 0.1s;
         }
 
@@ -117,7 +128,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.92);
+            background: var(--apple-modal-bg);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             display: flex;
@@ -134,7 +145,7 @@
             font-weight: 700;
             letter-spacing: -0.02em;
             margin-bottom: 10px;
-            color: #1d1d1f;
+            color: var(--apple-text);
         }
 
         #start-screen p {
@@ -151,7 +162,7 @@
 
         .char-card {
             width: 130px;
-            height: 190px;
+            height: 200px;
             border: 1px solid var(--apple-border);
             border-radius: 18px;
             cursor: pointer;
@@ -164,12 +175,14 @@
             text-align: center;
             padding: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+            color: var(--apple-text);
+            position: relative; /* Needed for cursor indicators */
         }
 
         .char-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 12px 24px rgba(0,0,0,0.08);
-            border-color: #86868b;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+            border-color: var(--apple-gray);
         }
 
         .char-icon { font-size: 48px; margin-bottom: 10px; }
@@ -178,7 +191,7 @@
             margin: 5px 0; 
             font-size: 16px; 
             font-weight: 600; 
-            color: #1d1d1f !important; 
+            color: var(--apple-text) !important; 
         }
 
         .char-desc {
@@ -189,62 +202,59 @@
         }
 
         /* Selection States */
-        .char-card.selected-p1 { 
-            border: 2px solid #ff3b30; 
-            background-color: #fff0f0;
+        .char-card.selected-p1 { border: 2px solid #ff3b30; background-color: rgba(255, 59, 48, 0.1); }
+        .char-card.selected-p2 { border: 2px solid #007aff; background-color: rgba(0, 122, 255, 0.1); }
+        .char-card.selected-both { border: 2px solid #af52de; background-color: rgba(175, 82, 222, 0.1); }
+
+        /* New Gamepad Cursor Indicators */
+        .p1-cursor-indicator, .p2-cursor-indicator {
+            position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
+            font-size: 24px; display: none; animation: bounce 1s infinite;
         }
-        .char-card.selected-p2 { 
-            border: 2px solid #007aff; 
-            background-color: #f0f8ff;
-        }
-        .char-card.selected-both { 
-            border: 2px solid #af52de; 
-            background-color: #faf0ff;
+        .char-card.hover-p1 .p1-cursor-indicator { display: block; content: "🔻"; color: #ff3b30; }
+        .char-card.hover-p2 .p2-cursor-indicator { display: block; content: "🔻"; color: #007aff; }
+
+        @keyframes bounce {
+            0%, 100% { transform: translate(-50%, 0); }
+            50% { transform: translate(-50%, -5px); }
         }
 
-        button#start-btn {
+        button.btn-primary {
             margin-top: 20px;
             padding: 12px 40px;
             font-size: 17px;
             font-weight: 500;
             cursor: pointer;
-            display: none;
             background-color: var(--apple-blue);
             color: white;
             border: none;
-            border-radius: 980px; /* Pill shape */
+            border-radius: 980px;
             transition: background-color 0.2s;
         }
 
-        button#start-btn:hover {
-            background-color: #0077ED;
-        }
+        button.btn-primary:hover { background-color: #0077ED; }
 
         .instructions { 
             font-size: 13px; 
             color: var(--apple-gray); 
             margin-top: 40px; 
             text-align: center;
-            background: #f5f5f7;
+            background: rgba(128,128,128,0.05);
             padding: 20px;
             border-radius: 12px;
         }
         
         .instructions table th { color: var(--apple-text); font-weight: 600; }
         
-        .key-hint { color: #eebb00; font-weight: bold; }
-        
-        /* In-game text tweaks */
         #p1-name { color: #ff3b30 !important; font-size: 16px; }
         #p2-name { color: #007aff !important; font-size: 16px; }
         
-        /* VS Timer styling */
         #center-hud {
             text-align:center; 
             margin-top:10px; 
             font-size: 28px; 
             font-weight: 800; 
-            color: #1d1d1f;
+            color: var(--apple-text);
         }
         #game-timer {
             font-size: 14px; 
@@ -253,6 +263,90 @@
             margin-top: 5px;
             font-variant-numeric: tabular-nums;
         }
+
+        #gamepad-status {
+            position: absolute;
+            top: 10px;
+            left: 20px;
+            font-size: 12px;
+            color: var(--apple-gray);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        #gamepad-status.active { opacity: 1; }
+        .gp-icon { width: 18px; height: 12px; background: #86868b; border-radius: 2px; }
+
+        /* Settings Modal */
+        #settings-modal {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(5px);
+            z-index: 20;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Pairing Modal Style */
+        #pairing-modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            z-index: 30; display: none; align-items: center; justify-content: center;
+        }
+
+        .settings-card {
+            width: 400px;
+            background: var(--apple-card-bg);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .settings-card h2 { margin-top: 0; margin-bottom: 20px; color: var(--apple-text); }
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--apple-border);
+            font-size: 15px;
+        }
+        .setting-row:last-of-type { border-bottom: none; }
+        
+        /* Apple Switch Toggle */
+        .switch { position: relative; display: inline-block; width: 40px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: "";
+            height: 20px; width: 20px;
+            left: 2px; bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        input:checked + .slider { background-color: var(--apple-blue); }
+        input:checked + .slider:before { transform: translateX(16px); }
+
+        .close-btn {
+            margin-top: 20px;
+            background: #e5e5ea;
+            color: #1d1d1f;
+            width: 100%;
+        }
+        .close-btn:hover { background: #d1d1d6; }
+
     </style>
 </head>
 <body>
@@ -261,9 +355,11 @@
     <canvas id="gameCanvas" width="1000" height="700"></canvas>
     
     <div id="ui-layer">
+        <div id="gamepad-status"><div class="gp-icon"></div> P1: Off | P2: Off</div>
+
         <div class="player-hud" id="p1-hud">
             <div id="p1-name">P1: 未选择</div>
-            <div style="font-size:13px; color:#86868b; margin-top:4px;">生命: <span id="p1-lives" style="color:#1d1d1f; font-weight:600">3</span> | 血量: <span id="p1-hp-text" style="color:#1d1d1f; font-weight:600">0</span></div>
+            <div style="font-size:13px; color:#86868b; margin-top:4px;">生命: <span id="p1-lives" style="font-weight:600">3</span> | 血量: <span id="p1-hp-text" style="font-weight:600">0</span></div>
             <div class="bar-container"><div id="p1-hp-bar" class="bar-fill hp-fill" style="width: 100%;"></div></div>
             <div class="bar-container"><div id="p1-res-bar" class="bar-fill resource-fill" style="width: 100%;"></div></div>
             <div class="cd-icons">
@@ -281,7 +377,7 @@
 
         <div class="player-hud" id="p2-hud" style="text-align: right;">
             <div id="p2-name">P2: 未选择</div>
-            <div style="font-size:13px; color:#86868b; margin-top:4px;">血量: <span id="p2-hp-text" style="color:#1d1d1f; font-weight:600">0</span> | 生命: <span id="p2-lives" style="color:#1d1d1f; font-weight:600">3</span></div>
+            <div style="font-size:13px; color:#86868b; margin-top:4px;">血量: <span id="p2-hp-text" style="font-weight:600">0</span> | 生命: <span id="p2-lives" style="font-weight:600">3</span></div>
             <div class="bar-container"><div id="p2-hp-bar" class="bar-fill hp-fill" style="width: 100%; float:right;"></div></div>
             <div class="bar-container"><div id="p2-res-bar" class="bar-fill resource-fill" style="width: 100%; float:right;"></div></div>
             <div class="cd-icons" style="justify-content: flex-end;">
@@ -293,140 +389,582 @@
         </div>
     </div>
 
+    <!-- Start Screen -->
     <div id="start-screen">
         <h1>Choose Your Fighter</h1>
         <p>P1 (Left Click) &nbsp;|&nbsp; P2 (Right Click)</p>
         <div class="char-select-container" id="char-selection">
             <!-- JS will populate this -->
         </div>
-        <button id="start-btn">开始对战</button>
+        <button id="start-btn" class="btn-primary" style="display:none;">开始对战</button>
         <div class="instructions">
-            <p style="margin-bottom: 10px; font-weight:600; color:#1d1d1f;">游戏目标：耗尽对手 3 条命</p>
+            <p style="margin-bottom: 10px; font-weight:600; color:var(--apple-text);">按 <span style="background:#eee; padding:2px 5px; border-radius:4px; color:#000;">ESC</span> 打开游戏设置</p>
             <table style="margin:0 auto; font-size:12px; text-align:left; border-spacing: 15px 5px;">
-                <tr><th>动作</th><th style="color:#ff3b30">Player 1</th><th style="color:#007aff">Player 2</th></tr>
-                <tr><td>移动</td><td>W A S D</td><td>I J K L</td></tr>
-                <tr><td>下台</td><td>S (在台上)</td><td>K (在台上)</td></tr>
-                <tr><td>攻击</td><td>X</td><td>, (逗号)</td></tr>
-                <tr><td>技能</td><td>C</td><td>. (句号)</td></tr>
-                <tr><td>大招</td><td>V</td><td>/ (斜杠)</td></tr>
-                <tr><td>换位</td><td>F</td><td>; (分号)</td></tr>
+                <tr><th>动作</th><th style="color:#ff3b30">P1 (Key/Pad)</th><th style="color:#007aff">P2 (Key/Pad)</th></tr>
+                <tr><td>移动</td><td>WASD / <span style="color:#0071e3">左摇杆</span></td><td>I J K L / <span style="color:#0071e3">左摇杆</span></td></tr>
+                <tr><td>跳跃</td><td>W / B键</td><td>I / B键</td></tr>
+                <tr><td>攻击</td><td>X / <span style="color:#0071e3">ZR键</span> (法师可蓄力)</td><td>, / <span style="color:#0071e3">ZR键</span></td></tr>
+                <tr><td>技能</td><td>C / <span style="color:#0071e3">A键</span></td><td>. / <span style="color:#0071e3">A键</span></td></tr>
+                <tr><td>大招</td><td>V / X键</td><td>/ / X键</td></tr>
+                <tr><td>换位</td><td>F / ZL键</td><td>; / ZL键</td></tr>
             </table>
+        </div>
+    </div>
+
+    <!-- NEW: Gamepad Pairing Modal -->
+    <div id="pairing-modal" style="display:none;">
+        <div class="settings-card">
+            <h2 id="pair-title">🎮 手柄配对</h2>
+            <div id="pair-step-indicator" style="margin-bottom:20px; color:var(--apple-blue); font-weight:600; font-size:18px;">
+                等待 P1 配对...
+            </div>
+            <p style="color:var(--apple-gray); margin-bottom:30px; line-height:1.5;">
+                请 <span id="target-player" style="color:var(--apple-text); font-weight:bold;">P1</span> 玩家<br>
+                同时按住手柄背部的 <span style="background:#eee; padding:2px 6px; border-radius:4px; color:#000;">ZL</span> + <span style="background:#eee; padding:2px 6px; border-radius:4px; color:#000;">ZR</span> 键
+            </p>
+            <div id="connected-list" style="margin-bottom:20px; font-size:13px; color:var(--apple-gray);">
+                已连接: 无
+            </div>
+            <button class="btn-primary close-btn" onclick="closePairing()">完成 / 跳过</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal">
+        <div class="settings-card">
+            <h2>游戏设置</h2>
+            
+            <div class="setting-row">
+                <span>手柄设置 (双人支持)</span>
+                <button class="btn-primary" style="padding: 5px 15px; font-size: 14px; margin-top:0;" onclick="openPairing()">
+                    ⚙️ 配置/链接手柄
+                </button>
+            </div>
+
+            <div class="setting-row">
+                <span>无冷却模式 (无限火力)</span>
+                <label class="switch">
+                    <input type="checkbox" id="set-cd">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="setting-row">
+                <span>夜间模式</span>
+                <label class="switch">
+                    <input type="checkbox" id="set-night">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="setting-row">
+                <span>极致华丽特效 (耗能)</span>
+                <label class="switch">
+                    <input type="checkbox" id="set-flashy">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="setting-row">
+                <span>游戏音效</span>
+                <label class="switch">
+                    <input type="checkbox" id="set-audio">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <button class="btn-primary close-btn" onclick="toggleSettings()">关闭</button>
         </div>
     </div>
 </div>
 
 <script>
-/** * 游戏常量配置 
+/** * -----------------------------------------------------
+ * 1. Sound Manager (AudioContext API)
+ * -----------------------------------------------------
  */
-const CANVAS_W = 1000;
-const CANVAS_H = 700;
-const FPS = 60;
-const GRAVITY = 0.6;
-const BASE_SPEED = 5;
-const BASE_JUMP = -13.5; 
-const SWAP_COOLDOWN = 600; 
+class SoundManager {
+    constructor() {
+        this.ctx = null;
+        this.enabled = false;
+    }
 
-// 角色定义
-const CHARACTERS = {
-    mage: { 
-        name: "法师", icon: "🧙‍♂️", hp: 4, color: "#5ac8fa", resourceType: "mana", maxResource: 100, 
-        desc: "激光炮 / 回魔",
-        atkCost: 10, atkDmg: 1, ultCost: 60
+    init() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+    }
+
+    play(type, pitchMod = 1.0) {
+        if (!this.enabled || !this.ctx) return;
+        this.init();
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        const now = this.ctx.currentTime;
+
+        switch (type) {
+            case 'ui':
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+                break;
+            case 'jump':
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150 * pitchMod, now);
+                osc.frequency.exponentialRampToValueAtTime(300 * pitchMod, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+                break;
+            case 'attack':
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(200 * pitchMod, now);
+                osc.frequency.exponentialRampToValueAtTime(50 * pitchMod, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+                break;
+            case 'skill':
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(400 * pitchMod, now);
+                osc.frequency.linearRampToValueAtTime(600 * pitchMod, now + 0.2);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+                break;
+            case 'ult':
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.linearRampToValueAtTime(800, now + 1.0);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 1.5);
+                const lfo = this.ctx.createOscillator();
+                lfo.frequency.value = 20;
+                lfo.connect(gain.gain);
+                lfo.start(now);
+                lfo.stop(now + 1.5);
+                osc.start(now);
+                osc.stop(now + 1.5);
+                break;
+            case 'hit':
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+                break;
+        }
+    }
+}
+const soundManager = new SoundManager();
+
+/** * -----------------------------------------------------
+ * 2. Settings Management
+ * -----------------------------------------------------
+ */
+const Settings = {
+    noCooldown: false,
+    nightMode: false,
+    flashyMode: false,
+    audioEnabled: false,
+
+    load() {
+        const saved = localStorage.getItem('brawl_settings');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            this.noCooldown = parsed.noCooldown || false;
+            this.nightMode = parsed.nightMode || false;
+            this.flashyMode = parsed.flashyMode || false;
+            this.audioEnabled = parsed.audioEnabled || false;
+        }
+        this.apply();
     },
-    warrior: { 
-        name: "战士", icon: "⚔️", hp: 6, color: "#ff3b30", resourceType: "rage", maxResource: 100, 
-        desc: "冲锋 / 狂暴",
-        atkCost: 0, atkDmg: 1, skillCost: 30, ultCost: 80
+
+    save() {
+        localStorage.setItem('brawl_settings', JSON.stringify({
+            noCooldown: this.noCooldown,
+            nightMode: this.nightMode,
+            flashyMode: this.flashyMode,
+            audioEnabled: this.audioEnabled
+        }));
     },
-    tank: { 
-        name: "坦克", icon: "🛡️", hp: 7, color: "#34c759", resourceType: "cooldown", maxResource: 100, 
-        desc: "击退 / 概率格挡",
-        atkCost: 0, atkDmg: 1
-    },
-    marksman: { 
-        name: "射手", icon: "🔫", hp: 3, color: "#ffcc00", resourceType: "energy", maxResource: 100, 
-        desc: "翻滚 / 霰弹",
-        atkCost: 5, atkDmg: 1, skillCost: 25, ultCost: 60
-    },
-    ghost: { 
-        name: "幽灵", icon: "👻", hp: 5, color: "#af52de", resourceType: "cooldown", maxResource: 100, 
-        desc: "隐身 / 钩子",
-        atkCost: 0, atkDmg: 1
+
+    apply() {
+        document.getElementById('set-cd').checked = this.noCooldown;
+        document.getElementById('set-night').checked = this.nightMode;
+        document.getElementById('set-flashy').checked = this.flashyMode;
+        document.getElementById('set-audio').checked = this.audioEnabled;
+
+        document.body.classList.toggle('dark-mode', this.nightMode);
+        soundManager.enabled = this.audioEnabled;
     }
 };
 
-/**
- * 全局变量
+document.getElementById('set-cd').addEventListener('change', e => { Settings.noCooldown = e.target.checked; Settings.save(); Settings.apply(); });
+document.getElementById('set-night').addEventListener('change', e => { Settings.nightMode = e.target.checked; Settings.save(); Settings.apply(); });
+document.getElementById('set-flashy').addEventListener('change', e => { Settings.flashyMode = e.target.checked; Settings.save(); Settings.apply(); });
+document.getElementById('set-audio').addEventListener('change', e => { Settings.audioEnabled = e.target.checked; Settings.save(); Settings.apply(); });
+
+function toggleSettings() {
+    const modal = document.getElementById('settings-modal');
+    const isHidden = modal.style.display === 'none' || modal.style.display === '';
+    modal.style.display = isHidden ? 'flex' : 'none';
+    if (isHidden) {
+        Settings.load(); 
+        if(gameState === 'playing') gameState = 'paused';
+    } else {
+        if(gameState === 'paused') gameState = 'playing';
+    }
+}
+
+window.addEventListener('keydown', e => {
+    if (e.key === 'Escape') toggleSettings();
+});
+
+
+/** * -----------------------------------------------------
+ * REFACTORED: Dual Channel Gamepad Handler
+ * -----------------------------------------------------
  */
+class GamepadHandler {
+    constructor() {
+        this.controllers = { p1: null, p2: null }; // Store Gamepad Indices
+        this.deadzone = 0.15;
+        this.active = true;
+        
+        // Menu Navigation State
+        this.menuCooldown = { p1: 0, p2: 0 };
+        this.isPairingMode = false;
+        this.pairingStep = 1; // 1 for P1, 2 for P2
+        
+        window.addEventListener("gamepadconnected", (e) => this.onConnect(e));
+        window.addEventListener("gamepaddisconnected", (e) => this.onDisconnect(e));
+    }
+
+    onConnect(e) {
+        createPopup(CANVAS_W/2, 50, `🎮 Gamepad ${e.gamepad.index} Detected`, "#0071e3");
+        // Auto-assign if empty (Optional, but manual pairing is safer)
+        if (this.controllers.p1 === null) this.controllers.p1 = e.gamepad.index;
+        else if (this.controllers.p2 === null) this.controllers.p2 = e.gamepad.index;
+        this.updateStatusUI();
+    }
+
+    onDisconnect(e) {
+        if (this.controllers.p1 === e.gamepad.index) this.controllers.p1 = null;
+        if (this.controllers.p2 === e.gamepad.index) this.controllers.p2 = null;
+        createPopup(CANVAS_W/2, 50, `🚫 Gamepad Disconnected`, "#ff3b30");
+        this.updateStatusUI();
+    }
+
+    startPairing() {
+        this.isPairingMode = true;
+        this.pairingStep = 1;
+        this.controllers = { p1: null, p2: null }; // Reset on re-pair
+        this.updatePairingUI();
+    }
+
+    stopPairing() {
+        this.isPairingMode = false;
+        this.updateStatusUI();
+    }
+
+    // Helper to update the small text on the HUD
+    updateStatusUI() {
+        const statusDiv = document.getElementById('gamepad-status');
+        const p1State = this.controllers.p1 !== null ? "Active" : "Off";
+        const p2State = this.controllers.p2 !== null ? "Active" : "Off";
+        statusDiv.innerHTML = `<div class="gp-icon"></div> P1: ${p1State} | P2: ${p2State}`;
+        statusDiv.classList.add('active');
+    }
+
+    // Helper to update the Modal UI
+    updatePairingUI() {
+        const stepText = document.getElementById('pair-step-indicator');
+        const targetText = document.getElementById('target-player');
+        const listText = document.getElementById('connected-list');
+
+        if (this.pairingStep === 1) {
+            stepText.innerText = "等待 P1 配对...";
+            stepText.style.color = "#ff3b30";
+            targetText.innerText = "P1";
+        } else if (this.pairingStep === 2) {
+            stepText.innerText = "P1 已连接! 等待 P2 配对...";
+            stepText.style.color = "#007aff";
+            targetText.innerText = "P2";
+        } else {
+            stepText.innerText = "配对完成!";
+            stepText.style.color = "#34c759";
+            targetText.innerText = "任意";
+            setTimeout(() => closePairing(), 1000);
+        }
+
+        listText.innerHTML = `P1 ID: ${this.controllers.p1 ?? '--'} <br> P2 ID: ${this.controllers.p2 ?? '--'}`;
+    }
+
+    update() {
+        const pads = navigator.getGamepads();
+        if (!pads) return;
+
+        // --- 1. PAIRING LOGIC ---
+        if (this.isPairingMode) {
+            for (let i = 0; i < pads.length; i++) {
+                const gp = pads[i];
+                if (gp) {
+                    // Detect ZL (B6) + ZR (B7) press
+                    if (gp.buttons[6].pressed && gp.buttons[7].pressed) {
+                        if (this.pairingStep === 1) {
+                            this.controllers.p1 = gp.index;
+                            createPopup(CANVAS_W/2, CANVAS_H/2, "P1 LINKED!", "#ff3b30");
+                            this.pairingStep = 2;
+                            // Debounce slightly to prevent double mapping
+                            this.isPairingMode = false; // Pause briefly
+                            setTimeout(() => { this.isPairingMode = true; this.updatePairingUI(); }, 1000); 
+                        } else if (this.pairingStep === 2 && gp.index !== this.controllers.p1) {
+                            this.controllers.p2 = gp.index;
+                            createPopup(CANVAS_W/2, CANVAS_H/2, "P2 LINKED!", "#007aff");
+                            this.pairingStep = 3;
+                            this.updatePairingUI();
+                        }
+                    }
+                }
+            }
+            return; // Stop here if pairing
+        }
+
+        // --- 2. MENU LOGIC (Character Select) ---
+        if (gameState === 'menu') {
+            this.handleMenuInput(pads, 'p1', this.controllers.p1);
+            this.handleMenuInput(pads, 'p2', this.controllers.p2);
+            return;
+        }
+
+        // --- 3. GAMEPLAY LOGIC ---
+        if (gameState === 'playing' && this.active) {
+            if (players[0] && this.controllers.p1 !== null) this.handlePlayerInput(pads[this.controllers.p1], players[0]);
+            if (players[1] && this.controllers.p2 !== null) this.handlePlayerInput(pads[this.controllers.p2], players[1]);
+        }
+    }
+
+    handleMenuInput(pads, playerKey, padIndex) {
+        if (padIndex === null || !pads[padIndex]) return;
+        
+        const gp = pads[padIndex];
+        // Cooldown for menu navigation
+        if (this.menuCooldown[playerKey] > 0) {
+            this.menuCooldown[playerKey]--;
+        } else {
+            // Right Stick X (Axis 2) for navigation (or Left Stick Axis 0)
+            const axisX = Math.abs(gp.axes[2]) > 0.5 ? gp.axes[2] : (Math.abs(gp.axes[0]) > 0.5 ? gp.axes[0] : 0);
+            
+            if (Math.abs(axisX) > 0.5) {
+                navigateCharSelect(playerKey, axisX > 0 ? 1 : -1);
+                this.menuCooldown[playerKey] = 15; // Delay between moves
+                soundManager.play('ui', 1.2);
+            }
+        }
+
+        // Button 0 (A/B) to Select/Confirm
+        if (gp.buttons[0].pressed) {
+             if (this.menuCooldown[playerKey] === 0) {
+                 confirmCharSelect(playerKey);
+                 this.menuCooldown[playerKey] = 30; // Long delay after select
+             }
+        }
+    }
+
+    handlePlayerInput(gp, player) {
+        if (!gp || player.lives <= 0) return;
+
+        // Stick Movement
+        const rawX = gp.axes[0];
+        const rawY = gp.axes[1];
+        if (Math.abs(rawX) > this.deadzone) {
+            player.move(rawX);
+        } else {
+            player.move(0); // Stop if stick released
+        }
+        
+        if (rawY > 0.5) player.dropDown();
+
+        // Button Actions
+        player.isAtkHeld = gp.buttons[7].pressed; // ZR
+        if (gp.buttons[0].pressed) player.jump();   // B / A
+        if (gp.buttons[1].pressed) player.useSkill(); // A / B
+        if (gp.buttons[3].pressed) player.useUlt();   // X / Y
+        if (gp.buttons[6].pressed) player.switchPosition(); // ZL
+    }
+}
+
+/** * -----------------------------------------------------
+ * Game Constants & Globals
+ * -----------------------------------------------------
+ */
+const CANVAS_W = 1000;
+const CANVAS_H = 700;
+const GRAVITY = 0.8;
+const BASE_SPEED = 5;
+const BASE_JUMP = -16.0; 
+const SWAP_COOLDOWN = 600; 
+
+const CHARACTERS = {
+    mage: { 
+        name: "法师", icon: "🧙‍♂️", hp: 4, color: "#5ac8fa", resourceType: "mana", maxResource: 100, 
+        desc: "激光炮 / 蓄力普攻", atkCost: 10, atkDmg: 1, ultCost: 60
+    },
+    warrior: { 
+        name: "战士", icon: "⚔️", hp: 5, color: "#ff3b30", resourceType: "rage", maxResource: 100, 
+        desc: "冲锋 / 狂暴", atkCost: 0, atkDmg: 1, skillCost: 30, ultCost: 80
+    },
+    tank: { 
+        name: "坦克", icon: "🛡️", hp: 6, color: "#34c759", resourceType: "cooldown", maxResource: 100, 
+        desc: "击退 / 概率格挡", atkCost: 0, atkDmg: 1
+    },
+    marksman: { 
+        name: "射手", icon: "🔫", hp: 4, color: "#ffcc00", resourceType: "energy", maxResource: 100, 
+        desc: "翻滚 / 霰弹", atkCost: 5, atkDmg: 1, skillCost: 25, ultCost: 60
+    },
+    ghost: { 
+        name: "幽灵", icon: "👻", hp: 1, color: "#af52de", resourceType: "cooldown", maxResource: 100, 
+        desc: "隐身 / 钩子", atkCost: 0, atkDmg: 1
+    }
+};
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let gameLoopId;
 let lastTime = 0;
-let globalTime = 0; // In seconds
+let globalTime = 0; 
 
-// 输入状态
 const keys = {};
-
-// 游戏对象
 let players = [];
 let projectiles = [];
 let particles = [];
 let platforms = [];
-let spikeState = { active: false, timer: 0 }; // 5s CD, 3s Active
+let spikeState = { active: false, timer: 0 };
+let popups = []; 
 
-// 游戏状态
 let gameState = 'menu'; 
 let p1Char = null;
 let p2Char = null;
+const gamepadHandler = new GamepadHandler();
+
+// Global Selection State
+let selectionState = {
+    p1: { index: 0, confirmed: false },
+    p2: { index: 1, confirmed: false }
+};
+const charKeys = Object.keys(CHARACTERS);
 
 /**
- * 初始化与地图
+ * Initializers
  */
 function initMap() {
     platforms = [];
-    // Level 1: 地面 (Spikes)
     platforms.push({ x: 0, y: 650, w: 1000, h: 50, type: 'ground', level: 1 });
-    // Level 2
     platforms.push({ x: 100, y: 500, w: 200, h: 20, type: 'platform', level: 2, effect: 'jump' });
     platforms.push({ x: 700, y: 500, w: 200, h: 20, type: 'platform', level: 2, effect: 'jump' });
-    // Level 3
     platforms.push({ x: 0, y: 350, w: 150, h: 20, type: 'platform', level: 3, effect: 'slow' });
     platforms.push({ x: 850, y: 350, w: 150, h: 20, type: 'platform', level: 3, effect: 'slow' });
-    // Level 4
     platforms.push({ x: 350, y: 200, w: 300, h: 20, type: 'platform', level: 4, effect: 'speed' });
 }
 
-/**
- * 输入监听
- */
-window.addEventListener('keydown', e => {
-    keys[e.key.toLowerCase()] = true;
-    if (gameState === 'playing') handleSpecialInputs(e.key.toLowerCase(), true);
-});
-window.addEventListener('keyup', e => {
-    keys[e.key.toLowerCase()] = false;
-    if (gameState === 'playing') handleSpecialInputs(e.key.toLowerCase(), false);
-});
+window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
-// 角色选择逻辑
+// Populate Char Select with New Structure
 const charContainer = document.getElementById('char-selection');
-Object.keys(CHARACTERS).forEach(key => {
+charContainer.innerHTML = ''; // Clear existing
+charKeys.forEach((key, index) => {
     const char = CHARACTERS[key];
     const div = document.createElement('div');
     div.className = 'char-card';
-    div.innerHTML = `<div class="char-icon">${char.icon}</div><h3>${char.name}</h3><div class="char-desc">HP: ${char.hp}<br>${char.desc}</div>`;
+    div.id = `char-card-${index}`; // Add ID for easy access
+    // Added indicator spans
+    div.innerHTML = `
+        <span class="p1-cursor-indicator">🔻</span>
+        <span class="p2-cursor-indicator">🔻</span>
+        <div class="char-icon">${char.icon}</div>
+        <h3>${char.name}</h3>
+        <div class="char-desc">HP: ${char.hp}<br>${char.desc}</div>
+    `;
     
-    div.addEventListener('click', () => { p1Char = key; updateSelectionUI(); });
-    div.addEventListener('contextmenu', (e) => { e.preventDefault(); p2Char = key; updateSelectionUI(); });
+    // Mouse support remains
+    div.addEventListener('click', () => { 
+        selectionState.p1.index = index; 
+        confirmCharSelect('p1'); 
+    });
+    div.addEventListener('contextmenu', (e) => { 
+        e.preventDefault(); 
+        selectionState.p2.index = index; 
+        confirmCharSelect('p2'); 
+    });
     
-    div.dataset.char = key;
     charContainer.appendChild(div);
 });
 
-function updateSelectionUI() {
+// Initial Highlight
+updateCharHighlights();
+
+function navigateCharSelect(playerKey, direction) {
+    if (selectionState[playerKey].confirmed) return; // Locked if confirmed
+
+    let newIdx = selectionState[playerKey].index + direction;
+    if (newIdx < 0) newIdx = charKeys.length - 1;
+    if (newIdx >= charKeys.length) newIdx = 0;
+    
+    selectionState[playerKey].index = newIdx;
+    updateCharHighlights();
+}
+
+function confirmCharSelect(playerKey) {
+    const key = charKeys[selectionState[playerKey].index];
+    
+    if (playerKey === 'p1') {
+        p1Char = key;
+        selectionState.p1.confirmed = true;
+    } else {
+        p2Char = key;
+        selectionState.p2.confirmed = true;
+    }
+    
+    soundManager.play('ui', 1.0);
+    updateCharHighlights();
+    updateSelectionUI(); // Call original function to update borders/start btn
+}
+
+function updateCharHighlights() {
+    // Clear hover classes
     document.querySelectorAll('.char-card').forEach(c => {
-        c.className = 'char-card';
-        const k = c.dataset.char;
+        c.classList.remove('hover-p1', 'hover-p2');
+    });
+
+    // Add visual cursor for P1
+    const p1Card = document.getElementById(`char-card-${selectionState.p1.index}`);
+    if (p1Card) p1Card.classList.add('hover-p1');
+
+    // Add visual cursor for P2
+    const p2Card = document.getElementById(`char-card-${selectionState.p2.index}`);
+    if (p2Card) p2Card.classList.add('hover-p2');
+}
+
+function updateSelectionUI() {
+    document.querySelectorAll('.char-card').forEach((c, idx) => {
+        c.classList.remove('selected-p1', 'selected-p2', 'selected-both');
+        const k = charKeys[idx];
         if (p1Char === k && p2Char === k) c.classList.add('selected-both');
         else if (p1Char === k) c.classList.add('selected-p1');
         else if (p2Char === k) c.classList.add('selected-p2');
@@ -436,8 +974,29 @@ function updateSelectionUI() {
 
 document.getElementById('start-btn').addEventListener('click', startGame);
 
+// Pairing Modal Logic
+function openPairing() {
+    document.getElementById('settings-modal').style.display = 'none'; // Hide settings
+    document.getElementById('pairing-modal').style.display = 'flex';
+    gamepadHandler.startPairing();
+}
+
+function closePairing() {
+    document.getElementById('pairing-modal').style.display = 'none';
+    document.getElementById('settings-modal').style.display = 'flex'; // Back to settings
+    gamepadHandler.stopPairing();
+}
+
+// Menu Loop for Gamepad Polling
+function menuLoop() {
+    if (gameState === 'menu') {
+        gamepadHandler.update(); // Poll inputs for char select
+        requestAnimationFrame(menuLoop);
+    }
+}
+
 /**
- * 类定义
+ * Logic Classes
  */
 class Player {
     constructor(id, charKey, x, y) {
@@ -445,65 +1004,71 @@ class Player {
         this.charKey = charKey;
         this.stats = CHARACTERS[charKey];
         
-        // Physics
-        this.x = x;
-        this.y = y;
-        this.w = 30;
-        this.h = 50;
-        this.vx = 0;
-        this.vy = 0;
-        this.grounded = false;
-        this.platform = null; 
+        this.x = x; this.y = y; this.w = 30; this.h = 50;
+        this.vx = 0; this.vy = 0;
+        this.grounded = false; this.platform = null; 
+        this.inputX = 0; 
+        this.isAtkHeld = false;
         
-        // Status
         this.lives = 3;
         this.maxHp = this.stats.hp;
         this.hp = this.maxHp;
         this.dir = id === 1 ? 1 : -1; 
         
-        // Resources
-        this.resource = (this.stats.resourceType === 'mana' || this.stats.resourceType === 'energy') ? 100 : 0;
-        if (this.stats.resourceType === 'cooldown') this.resource = 100; 
-        
-        // Cooldowns & States
-        this.cdAtk = 0;
-        this.cdSkill = 0;
-        this.cdUlt = 0;
-        this.cdSwap = 0;
+        this.resource = 100; 
+        this.cdAtk = 0; this.cdSkill = 0; this.cdUlt = 0; this.cdSwap = 0;
         
         this.invuln = 0; 
-        this.buffSpeed = false;
-        this.buffJump = false;
-        this.debuffSlow = false;
-        this.invisible = false;
-        this.charging = false; // Mage ult prep
-        this.chargeTimer = 0;
-        this.raging = 0; 
-        this.stunned = 0;
-        this.tankUlt = 0; 
-        this.nextHitStun = false; 
+        this.buffSpeed = false; this.buffJump = false; this.debuffSlow = false;
+        this.invisible = false; this.invisibleTimer = 0; // Ghost property
+        this.charging = false; this.chargeTimer = 0;
+        this.raging = 0; this.stunned = 0; this.tankUlt = 0; this.nextHitStun = false; 
         
-        // Action States (Locked Movement)
-        this.actionState = 'idle'; // idle, rolling, dashing
-        this.actionTimer = 0;
-        this.atkAnimTimer = 0; // For visual swing effect
+        this.doubleDamageTimer = 0; // Ghost Ult Buff
+        this.dropCooldown = 0; // Timer to ignore platform collision
         
-        // Input Mapping
-        if (id === 1) {
-            this.keys = { l:'a', r:'d', u:'w', d:'s', atk:'x', skill:'c', ult:'v', swap:'f' };
-        } else {
-            this.keys = { l:'j', r:'l', u:'i', d:'k', atk:',', skill:'.', ult:'/', swap:';' };
-        }
+        this.actionState = 'idle'; this.actionTimer = 0; this.atkAnimTimer = 0;
+        this.mageChargingAtk = false; this.mageChargeAtkTimer = 0;
+
+        if (id === 1) this.keys = { l:'a', r:'d', u:'w', d:'s', atk:'x', skill:'c', ult:'v', swap:'f' };
+        else this.keys = { l:'j', r:'l', u:'i', d:'k', atk:',', skill:'.', ult:'/', swap:';' };
     }
 
-    isLocked() {
-        return this.stunned > 0 || this.charging || this.actionState !== 'idle';
+    move(normalizedX) { this.inputX = normalizedX; }
+    jump() {
+        if (!this.isLocked() && this.grounded) {
+            let jumpPower = BASE_JUMP;
+            if (this.buffJump) jumpPower *= 1.5;
+            this.vy = jumpPower;
+            this.grounded = false;
+            this.platform = null;
+            soundManager.play('jump', this.id === 1 ? 1 : 0.8);
+        }
     }
+    dropDown() {
+        if (!this.isLocked() && this.grounded && this.platform && this.platform.type !== 'ground') {
+            this.dropCooldown = 20; 
+            this.grounded = false; 
+            this.platform = null;
+            this.y += 2; 
+        }
+    }
+    useUltimate() { this.useUlt(); }
+    switchPosition() { this.useSwap(); }
+    isLocked() { return this.stunned > 0 || this.charging || this.actionState !== 'idle'; }
 
     update() {
         if (this.lives <= 0) return;
 
-        // Timers
+        // GOD MODE
+        if (Settings.noCooldown) {
+            this.resource = 100;
+            if(this.cdSkill > 0) this.cdSkill = 0;
+            if(this.cdUlt > 0) this.cdUlt = 0;
+            if(this.cdSwap > 0) this.cdSwap = 0;
+            if(this.cdAtk > 5) this.cdAtk = 5; 
+        }
+
         if (this.invuln > 0) this.invuln--;
         if (this.cdAtk > 0) this.cdAtk--;
         if (this.cdSkill > 0) this.cdSkill--;
@@ -511,102 +1076,100 @@ class Player {
         if (this.cdSwap > 0) this.cdSwap--;
         if (this.stunned > 0) this.stunned--;
         if (this.atkAnimTimer > 0) this.atkAnimTimer--;
+        if (this.doubleDamageTimer > 0) this.doubleDamageTimer--;
+        if (this.dropCooldown > 0) this.dropCooldown--; 
         
-        // State Management
         if (this.actionState !== 'idle') {
             this.actionTimer--;
-            
-            // Marksman Rolling
-            if (this.actionState === 'rolling') {
-                this.invuln = 2; // Keep invincible
-            }
-            // Warrior Dashing (Push logic)
+            if (this.actionState === 'rolling') this.invuln = 2; 
             else if (this.actionState === 'dashing') {
                 let enemy = this.id === 1 ? players[1] : players[0];
-                // Simple collision check for push
                 if (Math.abs((enemy.y + enemy.h/2) - (this.y + this.h/2)) < 60 &&
                     Math.abs((enemy.x + enemy.w/2) - (this.x + this.w/2)) < 60) {
-                    // Push enemy
                     enemy.x = this.x + (this.dir * (this.w + 5));
-                    enemy.stunned = 2; // Stun while pushing
+                    enemy.stunned = 2; 
                 }
             }
-
-            if (this.actionTimer <= 0) {
-                this.actionState = 'idle';
-                this.vx = 0; // Stop dash/roll
-            }
+            if (this.actionTimer <= 0) { this.actionState = 'idle'; this.vx = 0; }
         }
 
-        if (this.stunned > 0) {
-            this.vx = 0;
-            this.applyPhysics();
-            return;
+        if (this.stunned > 0) { 
+            if (this.charKey === 'ghost' && keys[this.keys.skill] && this.cdSkill <= 0) {
+                this.useSkill();
+            }
+            this.vx = 0; 
+            this.applyPhysics(); 
+            return; 
         }
         
-        // Mage Charge
+        // Mage Charge Ult
         if (this.charging) {
             this.vx = 0;
             this.chargeTimer--;
-            if (Math.random() < 0.5) particles.push(new Particle(this.x + Math.random()*this.w, this.y + Math.random()*this.h, "#5ac8fa", 'aura'));
-            if (this.chargeTimer <= 0) {
-                this.charging = false;
-                this.fireLaser();
-            }
+            if (Settings.flashyMode) spawnFlashyParticles(this.x+this.w/2, this.y+this.h/2, this.stats.color, 'charge');
+            else if (Math.random() < 0.5) particles.push(new Particle(this.x + Math.random()*this.w, this.y + Math.random()*this.h, "#5ac8fa", 'aura'));
+            
+            if (this.chargeTimer <= 0) { this.charging = false; this.fireLaser(); }
             if (keys[this.keys.l]) this.vx = -BASE_SPEED * 0.2;
             if (keys[this.keys.r]) this.vx = BASE_SPEED * 0.2;
             this.applyPhysics();
             return;
         }
 
-        // Other updates
+        // Warrior Rage
         if (this.raging > 0) {
              this.raging--;
-             if (Math.random() < 0.3) particles.push(new Particle(this.x + Math.random()*this.w, this.y + Math.random()*this.h, "#ff3b30", 'aura'));
+             if (Settings.flashyMode) spawnFlashyParticles(this.x+Math.random()*this.w, this.y+Math.random()*this.h, "#ff0000", 'rage');
+             else if (Math.random() < 0.3) particles.push(new Particle(this.x + Math.random()*this.w, this.y + Math.random()*this.h, "#ff3b30", 'aura'));
         }
-        if (this.tankUlt > 0) this.tankUlt--;
+        
+        // Ghost Invisible
         if (this.invisible) {
             this.invisibleTimer--;
             if (this.invisibleTimer <= 0) this.invisible = false;
         }
-        if (this.charKey === 'marksman' && this.resource < 100 && globalTime % 12 === 0) {
-            this.resource++;
-        }
+        if (this.tankUlt > 0) this.tankUlt--;
 
-        // Movement (Only if not locked)
+        if (!Settings.noCooldown && this.charKey === 'marksman' && this.resource < 100 && globalTime % 12 === 0) this.resource++;
+
         if (!this.isLocked()) {
             let speed = BASE_SPEED;
             if (this.buffSpeed) speed *= 2;
             if (this.raging > 0) speed *= 2;
             if (this.debuffSlow) speed /= 2;
-            
             this.vx = 0;
             if (keys[this.keys.l]) { this.vx = -speed; this.dir = -1; }
             if (keys[this.keys.r]) { this.vx = speed; this.dir = 1; }
-            
-            // Jump
-            if (keys[this.keys.u] && this.grounded) {
-                let jumpPower = BASE_JUMP;
-                if (this.buffJump) jumpPower *= 1.5;
-                this.vy = jumpPower;
-                this.grounded = false;
-                this.platform = null;
-            }
-
-            // Drop
-            if (keys[this.keys.d] && this.grounded && this.platform && this.platform.type !== 'ground') {
-                 this.y += 1;
-                 this.grounded = false;
-                 this.platform = null;
-            }
+            if (Math.abs(this.inputX) > 0.05) { this.vx = this.inputX * speed; this.dir = this.inputX > 0 ? 1 : -1; }
+            if (keys[this.keys.u] && this.grounded) this.jump();
+            if (keys[this.keys.d]) this.dropDown();
         }
 
         this.applyPhysics();
         this.checkMapEffects();
         
-        // Actions
         if (!this.isLocked()) {
-            if (keys[this.keys.atk] && this.cdAtk <= 0) this.attack();
+            const pressingAtk = keys[this.keys.atk] || this.isAtkHeld;
+            
+            if (this.charKey === 'mage') {
+                if (pressingAtk) {
+                    this.mageChargingAtk = true;
+                    this.mageChargeAtkTimer++;
+                    if (this.mageChargeAtkTimer % 10 === 0) {
+                        particles.push(new Particle(this.x + Math.random()*this.w, this.y + Math.random()*this.h, "#5ac8fa", 'spark'));
+                    }
+                } else {
+                    if (this.mageChargingAtk) {
+                        let dmg = (this.mageChargeAtkTimer > 120) ? 2 : 1;
+                        if (this.cdAtk <= 0) this.attack(dmg);
+                        this.mageChargingAtk = false;
+                        this.mageChargeAtkTimer = 0;
+                    }
+                }
+            } else {
+                if (pressingAtk && this.cdAtk <= 0) this.attack();
+            }
+
             if (keys[this.keys.skill] && this.cdSkill <= 0) this.useSkill();
             if (keys[this.keys.ult] && this.cdUlt <= 0) this.useUlt();
             if (keys[this.keys.swap] && this.cdSwap <= 0) this.useSwap();
@@ -617,22 +1180,14 @@ class Player {
         this.vy += GRAVITY;
         this.x += this.vx;
         this.y += this.vy;
-
         if (this.x < 0) this.x = 0;
         if (this.x + this.w > CANVAS_W) this.x = CANVAS_W - this.w;
-
         this.grounded = false;
         for (let p of platforms) {
-            if (this.vy >= 0 && 
-                this.y + this.h >= p.y && 
-                this.y + this.h <= p.y + p.h + 10 && 
-                this.x + this.w > p.x && 
-                this.x < p.x + p.w) {
-                
-                this.y = p.y - this.h;
-                this.vy = 0;
-                this.grounded = true;
-                this.platform = p;
+            if (this.dropCooldown > 0 && p.type !== 'ground') continue;
+            
+            if (this.vy >= 0 && this.y + this.h >= p.y && this.y + this.h <= p.y + p.h + 10 && this.x + this.w > p.x && this.x < p.x + p.w) {
+                this.y = p.y - this.h; this.vy = 0; this.grounded = true; this.platform = p;
             }
         }
     }
@@ -645,34 +1200,31 @@ class Player {
             else if (this.platform.level === 4) { this.buffSpeed = true; onSpecialPlat = true; }
         }
         if (!onSpecialPlat) {
-            this.buffJump = false;
-            this.debuffSlow = false;
+            this.buffJump = false; this.debuffSlow = false;
             if (this.buffSpeed) { 
                 this.buffSpeed = false;
-                this.invuln = 60; 
                 createPopup(this.x, this.y, "Speed Lost!", "#000");
-                createPopup(this.x, this.y - 20, "Invincible!", "#ffcc00");
             }
         }
     }
 
     takeDamage(amount, type = 'normal') {
-        if (this.lives <= 0) return;
-        if (this.invuln > 0) return;
+        if (this.lives <= 0 || this.invuln > 0) return;
         
+        if (type === 'spike' && this.invisible) return;
+
         if (this.tankUlt > 0 && Math.random() < 0.5) {
             createPopup(this.x, this.y, "Blocked!", "#34c759");
-            for(let i=0;i<5;i++) particles.push(new Particle(this.x+this.w/2, this.y+this.h/2, "#34c759", 'spark'));
+            spawnFlashyParticles(this.x+this.w/2, this.y+this.h/2, "#34c759", "block");
             return;
         }
         
-        if (this.charKey === 'warrior' && this.resource < 100) {
-            this.resource = Math.min(100, this.resource + 5);
-        }
+        if (!Settings.noCooldown && this.charKey === 'warrior' && this.resource < 100) this.resource = Math.min(100, this.resource + 5);
 
         this.hp -= amount;
+        soundManager.play('hit', 1.0);
         createPopup(this.x, this.y, `-${amount}`, "#ff3b30");
-        for(let i=0; i<8; i++) particles.push(new Particle(this.x + this.w/2, this.y + this.h/2, "#ff3b30", 'splash'));
+        spawnFlashyParticles(this.x+this.w/2, this.y+this.h/2, "#ff3b30", "hit");
         
         if (this.hp <= 0) this.die();
         else this.invuln = 10;
@@ -681,59 +1233,70 @@ class Player {
     die() {
         this.lives--;
         createPopup(this.x, this.y, "DEAD", "#ff3b30");
-        for(let i=0; i<15; i++) particles.push(new Particle(this.x + this.w/2, this.y + this.h/2, this.stats.color, 'splash'));
-
+        spawnFlashyParticles(this.x+this.w/2, this.y+this.h/2, this.stats.color, "death");
         if (this.lives > 0) this.respawn();
         else endGame(this.id === 1 ? 2 : 1);
     }
 
     respawn() {
-        if (this.id === 1) { this.x = 50; this.y = 200; }
-        else { this.x = 920; this.y = 200; }
-        this.hp = this.maxHp;
-        this.vx = 0; this.vy = 0;
-        this.invuln = 60;
-        this.resource = (this.stats.resourceType === 'mana' || this.stats.resourceType === 'energy') ? 100 : 0;
-        this.invisible = false;
-        this.raging = 0;
-        this.buffSpeed = false;
-        this.actionState = 'idle';
+        if (this.id === 1) { this.x = 50; this.y = 200; } else { this.x = 920; this.y = 200; }
+        this.hp = this.maxHp; this.vx = 0; this.vy = 0; this.invuln = 60;
+        this.resource = 100; 
+        this.invisible = false; this.raging = 0; this.buffSpeed = false; this.actionState = 'idle'; this.inputX = 0;
+        this.doubleDamageTimer = 0;
     }
 
-    attack() {
-        if (this.invisible) this.invisible = false;
-        if (this.charKey === 'mage' && this.resource < 10) return;
-        if (this.charKey === 'marksman' && this.resource < 5) return;
+    attack(damageOverride = null) {
+        if (this.invisible) {
+             this.invisible = false;
+             createPopup(this.x, this.y, "Revealed!", "#fff");
+        }
+
+        if (this.cdAtk > 0) return;
+        
+        if (!Settings.noCooldown) {
+            if (this.charKey === 'mage' && this.resource < 10) return;
+            if (this.charKey === 'marksman' && this.resource < 5) return;
+        }
 
         this.cdAtk = 30; 
-        this.atkAnimTimer = 15; // Show visual for 0.25s
+        this.atkAnimTimer = 15; 
+        soundManager.play('attack', this.id === 1 ? 1.2 : 0.8);
 
         let startX = this.dir === 1 ? this.x + this.w : this.x;
         let startY = this.y + this.h / 2;
+        let baseDmg = damageOverride || 1;
+        
+        if (this.doubleDamageTimer > 0) {
+            baseDmg *= 2;
+            if (Math.random() < 0.5) createPopup(this.x, this.y-20, "Double Dmg!", "#af52de");
+        }
 
         if (this.charKey === 'mage') {
-            this.resource -= 10;
-            projectiles.push(new Projectile(startX, startY, this.dir * 8, 0, this.id, 1, 'fireball'));
+            if (!Settings.noCooldown) this.resource -= 10;
+            if (damageOverride === 2) {
+                spawnFlashyParticles(startX, startY, "#0000ff", "nova");
+                createPopup(this.x, this.y, "MAX CHARGE!", "#5ac8fa");
+            }
+            projectiles.push(new Projectile(startX, startY, this.dir * 8, 0, this.id, baseDmg, 'fireball'));
+            if (Settings.flashyMode) spawnFlashyParticles(startX, startY, "#5ac8fa", "sparkle");
         } else if (this.charKey === 'marksman') {
-            this.resource -= 5;
-            projectiles.push(new Projectile(startX, startY, this.dir * 15, 0, this.id, 1, 'bullet'));
+            if (!Settings.noCooldown) this.resource -= 5;
+            projectiles.push(new Projectile(startX, startY, this.dir * 15, 0, this.id, baseDmg, 'bullet'));
+            if (Settings.flashyMode) spawnFlashyParticles(startX, startY, "#ffcc00", "sparkle");
         } else if (this.charKey === 'warrior') {
-            this.createMeleeHitbox(60, 1, 0);
-            this.resource = Math.min(100, this.resource + 10);
+            this.createMeleeHitbox(60, baseDmg, 0);
+            if (!Settings.noCooldown) this.resource = Math.min(100, this.resource + 10);
+            if (Settings.flashyMode) spawnFlashyParticles(startX + this.dir*20, startY, "#ff3b30", "slash");
         } else if (this.charKey === 'tank') {
-            let hit = this.createMeleeHitbox(50, 1, 0);
+            let hit = this.createMeleeHitbox(50, baseDmg, 0);
             if (hit) {
                 let enemy = this.id === 1 ? players[1] : players[0];
-                enemy.vx = this.dir * 15;
-                enemy.vy = -5;
-                if (this.nextHitStun) {
-                    enemy.stunned = 30;
-                    createPopup(enemy.x, enemy.y, "Stun!", "#34c759");
-                    this.nextHitStun = false;
-                }
+                enemy.vx = this.dir * 15; enemy.vy = -5;
+                if (this.nextHitStun) { enemy.stunned = 30; createPopup(enemy.x, enemy.y, "Stun!", "#34c759"); this.nextHitStun = false; }
             }
         } else if (this.charKey === 'ghost') {
-            this.createMeleeHitbox(50, 1, 0);
+            this.createMeleeHitbox(75, baseDmg, 0); 
         }
     }
 
@@ -751,119 +1314,116 @@ class Player {
     }
 
     useSkill() {
-        if (this.invisible) this.invisible = false;
+        if (this.charKey !== 'ghost' && this.invisible) this.invisible = false;
+        if (this.cdSkill > 0) return;
+        
+        soundManager.play('skill', this.id === 1 ? 1.0 : 0.7);
+        if (Settings.flashyMode) spawnFlashyParticles(this.x+this.w/2, this.y+this.h/2, this.stats.color, "burst");
 
         if (this.charKey === 'mage') {
-            this.cdSkill = 600; 
-            this.resource = 100;
+            this.cdSkill = 600; this.resource = 100;
             createPopup(this.x, this.y, "Mana Full", "#5ac8fa");
-            for(let i=0; i<8; i++) particles.push(new Particle(this.x + Math.random()*this.w, this.y + this.h, "#5ac8fa", 'aura'));
         }
         else if (this.charKey === 'warrior') {
-            if (this.resource < 30) return;
-            this.resource -= 30;
-            this.cdSkill = 480; 
-            
-            // Charge logic
-            this.actionState = 'dashing';
-            this.actionTimer = 24; // Reduced to 2/5 distance approx (40 -> 24 frames)
-            this.vx = this.dir * 8; // Slightly slower speed (12 -> 8)
-            this.invuln = 10;
-            
-            for(let i=0; i<5; i++) particles.push(new Particle(this.x, this.y + Math.random()*this.h, "#aaa", 'dash'));
+            if (!Settings.noCooldown && this.resource < 30) return;
+            if (!Settings.noCooldown) this.resource -= 30;
+            this.cdSkill = 480; this.actionState = 'dashing'; this.actionTimer = 24; this.vx = this.dir * 8; this.invuln = 10;
         }
         else if (this.charKey === 'tank') {
-            this.cdSkill = 300; 
-            this.nextHitStun = true;
-            createPopup(this.x, this.y, "Stun Ready", "#34c759");
-            for(let i=0; i<5; i++) particles.push(new Particle(this.x + Math.random()*this.w, this.y, "#34c759", 'spark'));
+            this.cdSkill = 300; this.nextHitStun = true; createPopup(this.x, this.y, "Stun Ready", "#34c759");
         }
         else if (this.charKey === 'marksman') {
-            if (this.resource < 25) return;
-            this.resource -= 25;
-            this.cdSkill = 300; // Add Cooldown for roll
-            
-            // Roll logic
-            this.actionState = 'rolling';
-            this.actionTimer = 10; // Reduced to 1/3 distance (30 -> 10 frames)
-            this.vx = this.dir * 15;
-            this.invuln = 30; // Full duration invuln (0.5s) stays same
-            
-            createPopup(this.x, this.y-30, "无敌!", "#ffcc00");
-             for(let i=0; i<5; i++) particles.push(new Particle(this.x + this.w/2, this.y + this.h, "#8e8e93", 'splash'));
+            if (!Settings.noCooldown && this.resource < 25) return;
+            if (!Settings.noCooldown) this.resource -= 25;
+            this.cdSkill = 300; this.actionState = 'rolling'; this.actionTimer = 10; this.vx = this.dir * 15; this.invuln = 30;
         }
         else if (this.charKey === 'ghost') {
             this.cdSkill = 600; 
-            this.invisible = true;
-            this.invisibleTimer = 180; 
-            createPopup(this.x, this.y, "Invisible", "#af52de");
-             for(let i=0; i<10; i++) particles.push(new Particle(this.x + Math.random()*this.w, this.y + Math.random()*this.h, "#af52de", 'splash'));
+            this.invisible = true; 
+            this.invisibleTimer = 600; 
+            
+            if (this.stunned > 0) {
+                this.stunned = 0;
+                createPopup(this.x, this.y, "CLEANSED!", "#fff");
+            }
+            
+            createPopup(this.x, this.y, "Invisible (10s)", "#af52de");
         }
     }
 
     useUlt() {
-        if (this.invisible) this.invisible = false;
+        if (this.invisible) {
+            this.invisible = false;
+            createPopup(this.x, this.y, "Revealed!", "#fff");
+        }
+        if (this.cdUlt > 0) return;
+        
+        soundManager.play('ult', 1.0);
+        if (Settings.flashyMode) spawnFlashyParticles(this.x+this.w/2, this.y, this.stats.color, "nova");
 
         if (this.charKey === 'mage') {
-            if (this.resource < 60) return;
-            this.resource -= 60;
-            this.charging = true;
-            this.chargeTimer = 120; 
+            if (!Settings.noCooldown && this.resource < 60) return;
+            if (!Settings.noCooldown) this.resource -= 60;
+            this.charging = true; 
+            this.chargeTimer = 60; 
         }
         else if (this.charKey === 'warrior') {
-            if (this.resource < 80) return;
-            this.resource -= 80;
-            this.raging = 300; 
-            createPopup(this.x, this.y, "RAGE!", "#ff3b30");
+            if (!Settings.noCooldown && this.resource < 80) return;
+            if (!Settings.noCooldown) this.resource -= 80;
+            this.raging = 300; createPopup(this.x, this.y, "RAGE!", "#ff3b30");
         }
         else if (this.charKey === 'tank') {
-            this.cdUlt = 1080; 
-            this.tankUlt = 180; 
-            createPopup(this.x, this.y, "Guard Up", "#34c759");
+            this.cdUlt = 1080; this.tankUlt = 180; createPopup(this.x, this.y, "Guard Up", "#34c759");
         }
         else if (this.charKey === 'marksman') {
-            if (this.resource < 60) return;
-            this.resource -= 60;
+            if (!Settings.noCooldown && this.resource < 60) return;
+            if (!Settings.noCooldown) this.resource -= 60;
             for(let i=0; i<20; i++) {
-                 let angle = (Math.random() - 0.5) * 1; 
-                 let speed = Math.random() * 5 + 2;
+                 let angle = (Math.random() - 0.5) * 1; let speed = Math.random() * 5 + 2;
                  let p = new Particle(this.x+(this.dir===1?this.w:0), this.y+this.h/2, "#ff9500", 'spark');
-                 p.vx = (this.dir * speed) + Math.cos(angle)*2;
-                 p.vy = Math.sin(angle) * 2;
+                 p.vx = (this.dir * speed) + Math.cos(angle)*2; p.vy = Math.sin(angle) * 2;
                  particles.push(p);
             }
             for(let i=-2; i<=2; i++) {
-                let vy = i * 2;
-                projectiles.push(new Projectile(this.x + (this.dir===1?this.w:0), this.y + this.h/2, this.dir * 12, vy, this.id, 1, 'bullet'));
+                let vy = i * 2; projectiles.push(new Projectile(this.x + (this.dir===1?this.w:0), this.y + this.h/2, this.dir * 12, vy, this.id, 1, 'bullet'));
             }
         }
         else if (this.charKey === 'ghost') {
-            this.cdUlt = 1080; 
-            projectiles.push(new Projectile(this.x, this.y + this.h/2, this.dir * 20, 0, this.id, 1, 'hook'));
+            this.cdUlt = 600; 
+            projectiles.push(new Projectile(this.x, this.y + this.h/2, this.dir * 30, 0, this.id, 0, 'hook'));
         }
     }
 
     fireLaser() {
         let laserY = this.y + this.h/2;
-        projectiles.push(new Projectile(0, laserY, 0, 0, this.id, 0, 'laser_beam'));
+        projectiles.push(new Projectile(0, laserY, 0, 0, this.id, 1, 'mage_ult'));
+        if (Settings.flashyMode) spawnFlashyParticles(this.x, laserY, "#5ac8fa", "beam_trail");
     }
 
     useSwap() {
+        if (this.cdSwap > 0) return;
         this.cdSwap = SWAP_COOLDOWN;
         let other = this.id === 1 ? players[1] : players[0];
         let tx = this.x; let ty = this.y;
         this.x = other.x; this.y = other.y;
         other.x = tx; other.y = ty;
-        createPopup(this.x, this.y, "SWAP!", "#af52de");
-        createPopup(other.x, other.y, "SWAP!", "#af52de");
+        createPopup(this.x, this.y, "SWAP!", "#af52de"); createPopup(other.x, other.y, "SWAP!", "#af52de");
+        if (Settings.flashyMode) {
+            spawnFlashyParticles(this.x, this.y, "#af52de", "burst");
+            spawnFlashyParticles(other.x, other.y, "#af52de", "burst");
+        }
+        soundManager.play('skill', 1.5);
     }
 
     draw(ctx) {
          if (this.lives <= 0) return;
          
-         if (this.invisible) ctx.globalAlpha = 0.3;
+         if (this.invisible) {
+             let blinkCycle = this.invisibleTimer % 90;
+             if (blinkCycle > 10) return; 
+             ctx.globalAlpha = 0.4; 
+         }
          
-         // Visuals - Warrior Rage
          if (this.raging > 0) {
              ctx.save();
              ctx.strokeStyle = `rgba(255, 59, 48, ${(this.raging % 20) / 20})`;
@@ -872,44 +1432,41 @@ class Player {
              ctx.restore();
          }
 
-         // Visuals - Tank Shield
          if (this.tankUlt > 0) {
              ctx.save();
              ctx.strokeStyle = "#34c759";
-             ctx.lineWidth = 3;
-             ctx.beginPath();
-             ctx.arc(this.x+this.w/2, this.y+this.h/2, 40, 0, Math.PI*2);
-             ctx.stroke();
+             ctx.lineWidth = Settings.flashyMode ? 6 : 3;
+             if (Settings.flashyMode) ctx.shadowBlur = 15; ctx.shadowColor = "#34c759";
+             ctx.beginPath(); ctx.arc(this.x+this.w/2, this.y+this.h/2, 40, 0, Math.PI*2); ctx.stroke();
              ctx.restore();
          }
 
-         // Visuals - Melee Attack Swing
+         if (this.doubleDamageTimer > 0) {
+             ctx.save();
+             ctx.strokeStyle = "#af52de";
+             ctx.lineWidth = 2;
+             ctx.setLineDash([5, 5]);
+             ctx.strokeRect(this.x-2, this.y-2, this.w+4, this.h+4);
+             ctx.restore();
+         }
+
          if (this.atkAnimTimer > 0) {
             ctx.save();
-            let cx = this.x + this.w/2;
-            let cy = this.y + this.h/2;
-            let range = 40;
-            
+            let cx = this.x + this.w/2; let cy = this.y + this.h/2; let range = 40;
             if (this.charKey === 'warrior') {
-                // Sword Arc
                 ctx.beginPath();
                 let startAngle = this.dir === 1 ? -0.5 : Math.PI - 0.5;
                 let endAngle = this.dir === 1 ? 0.5 : Math.PI + 0.5;
                 ctx.arc(cx, cy, range + 10, startAngle, endAngle, false);
                 ctx.strokeStyle = `rgba(255, 255, 255, ${this.atkAnimTimer/15})`;
-                ctx.lineWidth = 8;
-                ctx.stroke();
-                // Red core
+                ctx.lineWidth = 8; ctx.stroke();
                 ctx.strokeStyle = `rgba(255, 59, 48, ${this.atkAnimTimer/15})`;
-                ctx.lineWidth = 4;
-                ctx.stroke();
+                ctx.lineWidth = 4; ctx.stroke();
             } else if (this.charKey === 'tank') {
-                // Shield Bash (Rectangle push)
                 ctx.fillStyle = `rgba(52, 199, 89, ${this.atkAnimTimer/15})`;
                 let bx = this.dir === 1 ? this.x + this.w : this.x - 40;
                 ctx.fillRect(bx, this.y, 40, this.h);
             } else if (this.charKey === 'ghost') {
-                // Claw scratches
                 ctx.strokeStyle = `rgba(175, 82, 222, ${this.atkAnimTimer/15})`;
                 ctx.lineWidth = 3;
                 let offX = this.dir * 40;
@@ -920,55 +1477,55 @@ class Player {
             ctx.restore();
          }
 
-         // Base Player
          ctx.fillStyle = this.stats.color;
          if (this.invuln > 0 && Math.floor(Date.now()/50)%2===0) ctx.fillStyle = "#fff"; 
          ctx.fillRect(this.x, this.y, this.w, this.h);
          
-         // Icon
+         ctx.fillStyle = "rgba(255,255,255,0.6)";
+         ctx.beginPath();
+         if (this.dir === 1) { 
+             ctx.moveTo(this.x + this.w - 4, this.y + 10);
+             ctx.lineTo(this.x + this.w + 4, this.y + 15);
+             ctx.lineTo(this.x + this.w - 4, this.y + 20);
+         } else { 
+             ctx.moveTo(this.x + 4, this.y + 10);
+             ctx.lineTo(this.x - 4, this.y + 15);
+             ctx.lineTo(this.x + 4, this.y + 20);
+         }
+         ctx.fill();
+         
          ctx.font = "30px Apple Color Emoji, Segoe UI Emoji";
-         ctx.textAlign = "center";
-         ctx.textBaseline = "middle";
-         ctx.fillStyle = "#fff";
+         ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#fff";
          ctx.fillText(this.stats.icon, this.x + this.w/2, this.y + this.h/2 + 2);
 
-         // Mage Charge
          if (this.charging) {
              ctx.fillStyle = "#5ac8fa";
-             ctx.fillRect(this.x, this.y - 10, this.w * (this.chargeTimer/120), 5);
+             ctx.fillRect(this.x, this.y - 10, this.w * (this.chargeTimer/60), 5);
          }
-
+         if (this.mageChargingAtk) {
+             ctx.fillStyle = "#5ac8fa";
+             ctx.fillRect(this.x, this.y - 15, this.w * Math.min(1, this.mageChargeAtkTimer/120), 3);
+         }
          ctx.globalAlpha = 1.0;
     }
 }
 
 class Projectile {
     constructor(x, y, vx, vy, ownerId, dmg, type) {
-        this.x = x; this.y = y;
-        this.vx = vx; this.vy = vy;
-        this.ownerId = ownerId;
-        this.dmg = dmg;
-        this.type = type;
+        this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+        this.ownerId = ownerId; this.dmg = dmg; this.type = type;
         this.active = true;
-        this.w = (type === 'fireball') ? 15 : 8;
-        this.h = (type === 'fireball') ? 15 : 8;
-        
+        this.w = (type === 'fireball') ? 15 : 8; this.h = (type === 'fireball') ? 15 : 8;
         if (type === 'hook') { this.w = 20; this.h = 10; }
-        if (type === 'laser_beam') { 
-            this.w = CANVAS_W; 
-            this.h = 40; 
-            this.x = 0;
-            this.life = 180; 
-            this.tickTimer = 0;
-        }
+        if (type === 'laser_beam' || type === 'mage_ult') { this.w = CANVAS_W; this.h = 40; this.x = 0; this.life = 180; this.tickTimer = 0; }
+        
+        this.hasRooted = false; 
     }
-
     update() {
         if (!this.active) return;
-
-        if (this.type === 'laser_beam') {
-            this.life--;
-            if (this.life <= 0) this.active = false;
+        
+        if (this.type === 'laser_beam' || this.type === 'mage_ult') {
+            this.life--; if (this.life <= 0) this.active = false;
             if (Math.random() < 0.5) {
                 let py = this.y + (Math.random()-0.5)*20;
                 particles.push(new Particle(Math.random()*CANVAS_W, py, "#5ac8fa", 'spark'));
@@ -977,121 +1534,119 @@ class Projectile {
             if (this.tickTimer % 30 === 0) {
                 let enemy = this.ownerId === 1 ? players[1] : players[0];
                 if (Math.abs((enemy.y + enemy.h/2) - this.y) < this.h) {
-                     enemy.takeDamage(1); 
+                     if (this.type === 'mage_ult') {
+                         if (!this.hasRooted) {
+                             enemy.takeDamage(1); 
+                             enemy.stunned = 120; 
+                             createPopup(enemy.x, enemy.y, "ROOTED!", "#5ac8fa");
+                             this.hasRooted = true;
+                         }
+                     } else {
+                        enemy.takeDamage(1);
+                     }
                 }
             }
             return;
         }
-
-        this.x += this.vx;
-        this.y += this.vy;
-
+        this.x += this.vx; this.y += this.vy;
         if (this.x < -50 || this.x > CANVAS_W + 50) this.active = false;
+        
+        if (Settings.flashyMode && Math.random() < 0.3) {
+             particles.push(new Particle(this.x, this.y, this.ownerId===1?'#ff3b30':'#007aff', 'spark'));
+        }
 
         let enemy = this.ownerId === 1 ? players[1] : players[0];
-        if (this.x < enemy.x + enemy.w &&
-            this.x + this.w > enemy.x &&
-            this.y < enemy.y + enemy.h &&
-            this.y + this.h > enemy.y) {
-            
+        if (this.x < enemy.x + enemy.w && this.x + this.w > enemy.x && this.y < enemy.y + enemy.h && this.y + this.h > enemy.y) {
             if (this.type === 'hook') {
-                enemy.x = players[this.ownerId-1].x + (players[this.ownerId-1].dir * 40);
-                enemy.y = players[this.ownerId-1].y;
-                enemy.stunned = 10;
-                enemy.takeDamage(this.dmg);
+                let owner = players[this.ownerId-1];
+                owner.doubleDamageTimer = 120; 
+                createPopup(owner.x, owner.y - 30, "Buffed!", "#af52de");
+                enemy.x = owner.x + (owner.dir * 50);
+                enemy.y = owner.y; 
+                enemy.vx = 0; 
+                enemy.stunned = 90; 
+                createPopup(enemy.x, enemy.y, "HOOKED!", "#af52de");
             } else {
                 enemy.takeDamage(this.dmg);
             }
             this.active = false;
         }
     }
-
     draw(ctx) {
         if (!this.active) return;
-        
-        if (this.type === 'laser_beam') {
+        if (this.type === 'laser_beam' || this.type === 'mage_ult') {
+            ctx.save();
+            if (Settings.flashyMode) {
+                ctx.shadowBlur = 20; ctx.shadowColor = "#5ac8fa";
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.life/180})`;
+                ctx.fillRect(0, this.y - this.h/2 + 10, CANVAS_W, this.h - 20);
+            }
             ctx.fillStyle = `rgba(90, 200, 250, ${this.life/180 * 0.5})`;
             ctx.fillRect(0, this.y - this.h/2, CANVAS_W, this.h);
+            ctx.restore();
             return;
         }
-        
         if (this.type === 'hook') {
             let owner = players[this.ownerId - 1];
-            ctx.strokeStyle = "#8e8e93";
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(owner.x + owner.w/2, owner.y + owner.h/2);
-            ctx.lineTo(this.x, this.y);
-            ctx.stroke();
+            ctx.strokeStyle = "#8e8e93"; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(owner.x + owner.w/2, owner.y + owner.h/2); ctx.lineTo(this.x, this.y); ctx.stroke();
             ctx.fillStyle = "#af52de";
         } else {
             ctx.fillStyle = this.ownerId === 1 ? '#ff3b30' : '#007aff';
         }
         
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.w/2, 0, Math.PI*2);
-        ctx.fill();
+        ctx.save();
+        if(Settings.flashyMode) { ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle; }
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.w/2, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
     }
 }
 
 class Particle {
     constructor(x, y, color, type = 'normal') {
-        this.x = x; this.y = y;
-        this.type = type;
-        this.color = color;
+        this.x = x; this.y = y; this.type = type; this.color = color;
+        this.vx = (Math.random() - 0.5) * 5; this.vy = (Math.random() - 0.5) * 5;
+        this.life = 30; this.size = 4;
         
-        if (type === 'splash') {
-            this.vx = (Math.random() - 0.5) * 8;
-            this.vy = (Math.random() - 0.5) * 8;
-            this.life = 20;
-            this.size = Math.random() * 4 + 2;
-        } else if (type === 'spark') {
-            this.vx = (Math.random() - 0.5) * 3;
-            this.vy = (Math.random() - 0.5) * 3;
-            this.life = 15;
-            this.size = 2;
-        } else if (type === 'aura') {
-            this.vx = 0;
-            this.vy = -2;
-            this.life = 20;
-            this.size = 3;
-        } else if (type === 'dash') {
-            this.vx = -2; 
-            this.vy = 0;
-            this.life = 10;
-            this.size = 2;
-        } else {
-            this.vx = (Math.random() - 0.5) * 5;
-            this.vy = (Math.random() - 0.5) * 5;
-            this.life = 30;
-            this.size = 4;
-        }
+        if (type === 'splash') { this.vx *= 2; this.vy *= 2; this.life = 20; }
+        else if (type === 'spark') { this.vx *= 0.5; this.vy *= 0.5; this.life = 15; this.size = 2; }
+        else if (type === 'aura') { this.vx = 0; this.vy = -2; this.life = 20; this.size = 3; }
+        else if (type === 'dash') { this.vx = -2; this.vy = 0; this.life = 10; this.size = 2; }
+        else if (type === 'nova') { this.vx *= 4; this.vy *= 4; this.life = 50; this.size = 6; }
+        else if (type === 'beam_trail') { this.vx = (Math.random()-0.5)*2; this.vy = (Math.random()-0.5)*2; this.life = 40; }
     }
     update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        this.life--;
+        this.x += this.vx; this.y += this.vy; this.life--;
+        if (this.type === 'nova') this.size *= 0.95;
     }
     draw(ctx) {
         ctx.fillStyle = this.color;
-        ctx.globalAlpha = this.life / (this.type === 'splash' ? 20 : 30);
+        ctx.globalAlpha = this.life / 30;
+        if(Settings.flashyMode && this.type === 'nova') ctx.globalCompositeOperation = 'lighter';
         ctx.fillRect(this.x, this.y, this.size, this.size);
         ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
     }
 }
 
-let popups = [];
-function createPopup(x, y, text, color) {
-    popups.push({x, y, text, color, life: 40});
+function spawnFlashyParticles(x, y, color, type) {
+    let count = type === 'nova' || type === 'death' ? 40 : 15;
+    for(let i=0; i<count; i++) {
+        particles.push(new Particle(x, y, color, type === 'death' ? 'nova' : type));
+    }
 }
+
+function createPopup(x, y, text, color) { popups.push({x, y, text, color, life: 40}); }
 
 function startGame() {
     if (!p1Char || !p2Char) return;
-    const startScreen = document.getElementById('start-screen');
-    startScreen.style.opacity = '0';
-    setTimeout(() => { startScreen.style.display = 'none'; }, 500);
+    Settings.load(); // Load and apply settings before start
+    document.getElementById('start-screen').style.display = 'none';
     initMap();
-    players = [ new Player(1, p1Char, 100, 200), new Player(2, p2Char, 900, 200) ];
+    const p1 = new Player(1, p1Char, 100, 200);
+    const p2 = new Player(2, p2Char, 900, 200);
+    players = [p1, p2];
+    // Removed manual setTarget call as GamepadHandler handles indices internally
     gameState = 'playing';
     spikeState = { active: false, timer: 0 };
     document.getElementById('p1-name').innerText = `P1: ${CHARACTERS[p1Char].icon} ${CHARACTERS[p1Char].name}`;
@@ -1099,14 +1654,12 @@ function startGame() {
     gameLoop();
 }
 
-function handleSpecialInputs(key, isDown) {}
-
 function endGame(winnerId) {
     gameState = 'gameover';
     cancelAnimationFrame(gameLoopId);
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.fillStyle = Settings.nightMode ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.85)";
     ctx.fillRect(0,0, CANVAS_W, CANVAS_H);
-    ctx.fillStyle = "#1d1d1f";
+    ctx.fillStyle = Settings.nightMode ? "#fff" : "#1d1d1f";
     ctx.font = "bold 60px -apple-system, BlinkMacSystemFont, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(`玩家 ${winnerId} 获胜!`, CANVAS_W/2, CANVAS_H/2);
@@ -1114,7 +1667,12 @@ function endGame(winnerId) {
 }
 
 function gameLoop(timestamp) {
+    if (gameState === 'paused') {
+        requestAnimationFrame(gameLoop); // Keep loop running for unpause
+        return;
+    }
     if (gameState !== 'playing') return;
+    
     let deltaTime = timestamp - lastTime;
     lastTime = timestamp;
     spikeState.timer++;
@@ -1122,14 +1680,24 @@ function gameLoop(timestamp) {
     spikeState.active = cycle < 180; 
     if (spikeState.timer % 60 === 0) globalTime++;
 
+    gamepadHandler.update();
+
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
     platforms.forEach(p => {
-        if (p.level === 1) ctx.fillStyle = spikeState.active ? "#ff3b30" : "#1d1d1f";
+        if (p.level === 1) ctx.fillStyle = spikeState.active ? "#ff3b30" : (Settings.nightMode ? "#333" : "#1d1d1f");
         else if (p.level === 2) ctx.fillStyle = "#4cd964";
         else if (p.level === 3) ctx.fillStyle = "#ff9500";
         else if (p.level === 4) ctx.fillStyle = "#007aff";
+        
+        if (Settings.flashyMode && p.level !== 1) {
+            ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
+        } else {
+            ctx.shadowBlur = 0;
+        }
+
         ctx.beginPath(); ctx.roundRect(p.x, p.y, p.w, p.h, 5); ctx.fill();
+        ctx.shadowBlur = 0;
         
         if (p.level === 1 && spikeState.active) {
             ctx.fillStyle = "#ff3b30";
@@ -1137,14 +1705,15 @@ function gameLoop(timestamp) {
                 ctx.beginPath(); ctx.moveTo(i, p.y); ctx.lineTo(i+10, p.y-15); ctx.lineTo(i+20, p.y); ctx.fill();
             }
             players.forEach(pl => {
-                if (pl.grounded && pl.platform === p) {
+                // GHOST IMMUNITY: If Invisible, ignore spikes
+                if (pl.grounded && pl.platform === p && !pl.invisible) {
                     if (spikeState.timer % 60 === 0) pl.takeDamage(1, 'spike');
                 }
             });
         }
     });
     
-    ctx.fillStyle = "#86868b";
+    ctx.fillStyle = Settings.nightMode ? "#86868b" : "#86868b";
     ctx.font = "12px -apple-system, BlinkMacSystemFont, sans-serif";
     ctx.fillText("Level 2: Jump x1.5", 150, 525);
     ctx.fillText("Level 3: Slow", 50, 375);
@@ -1169,6 +1738,8 @@ function gameLoop(timestamp) {
 
 function updateHUD() {
     document.getElementById('game-timer').innerText = `Time: ${Math.floor(globalTime / 60)}:${(globalTime % 60).toString().padStart(2,'0')}`;
+    if(Settings.nightMode) document.getElementById('game-timer').style.color = "#fff";
+    
     players.forEach((p, i) => {
         let id = i + 1;
         document.getElementById(`p${id}-hp-text`).innerText = p.hp;
@@ -1179,7 +1750,9 @@ function updateHUD() {
         document.getElementById(`p${id}-res-bar`).style.width = `${resPct}%`;
         setCD(`p${id}-cd-atk`, p.cdAtk, 30);
         setCD(`p${id}-cd-skill`, p.cdSkill, 600); 
-        setCD(`p${id}-cd-ult`, p.cdUlt, 1080);
+        
+        let ultMax = (p.charKey === 'ghost') ? 600 : 1080;
+        setCD(`p${id}-cd-ult`, p.cdUlt, ultMax);
         setCD(`p${id}-cd-swap`, p.cdSwap, 600);
     });
 }
@@ -1190,7 +1763,8 @@ function setCD(elId, current, max) {
 }
 
 initMap();
+Settings.load(); // Init settings on load
+menuLoop(); // Start polling for menu inputs
 </script>
-<!-- Gamepad Support --><script src="gamepad-handler.js"></script><script src="gamepad-integration.js"></script>
 </body>
 </html>
