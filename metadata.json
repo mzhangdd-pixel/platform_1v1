@@ -1,0 +1,5 @@
+{
+  "name": "Dual Platform Brawl",
+  "description": "A local multiplayer platformer fighting game with gamepad support, featuring multiple characters and dynamic map effects.",
+  "requestFramePermissions": []
+}
